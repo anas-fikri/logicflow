@@ -1,0 +1,6 @@
+# apps-diagram renderer — no pip dependencies
+# Uses Python stdlib only (json, sys, argparse, pathlib)
+#
+# For scanning code, install graphify separately:
+#   pip install graphifyy
+#   or: PYTHONPATH=~/graphify python3 -m graphify

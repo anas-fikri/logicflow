@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Output files (generated, not tracked)
+*-diagram.html
+*-scan.json
+*-scan.md
+*-ai-*.md
+merged-*.json
+
+# vendor (can re-download)
+vendor/
+
+# Test outputs
+codemap-test-*
+
+# HTTP server logs
+*.log
