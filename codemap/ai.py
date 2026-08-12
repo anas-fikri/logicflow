@@ -78,7 +78,7 @@ Sections to produce:
 - Business logic: {summary.get('total_business_logic', 0)}
 
 METHOD BREAKDOWN:
-{json.dumps(summary.get('endpoints_by_method', {}), indent=2)}
+{json.dumps(dict(list(summary.get('endpoints_by_method', {}).items())[:5]), indent=2)}
 
 API ENDPOINTS (10 contoh):
 {json.dumps(endpoints[:10], indent=2, ensure_ascii=False)}
@@ -128,7 +128,7 @@ Fokus ke: bagaimana aplikasi ini bekerja, alur data, dan panduan developer baru.
             method="POST",
         )
 
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=300) as resp:
             result = json.loads(resp.read().decode("utf-8"))
             msg = result["choices"][0]["message"]
             return msg.get("content") or msg.get("reasoning_content", "")

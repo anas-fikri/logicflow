@@ -95,23 +95,18 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
 .link-item:hover { background: #21262d; }
 
 /* SVG styles */
-.node-rect { rx: 6; stroke: #30363d; stroke-width: 1.5; transition: stroke 0.15s, opacity 0.15s; }
-.node-rect.selected { stroke: #f0e040; stroke-width: 3; }
-.node-rect.collapsed { stroke-dasharray: 4 3; opacity: 0.6; }
-.node-rect.dimmed { opacity: 0.2; }
-.node-text { fill: #ffffff; font-size: 11px; font-weight: 500; pointer-events: none; text-anchor: middle; dominant-baseline: middle; text-shadow: 0 0 4px rgba(0,0,0,0.8); }
-.node-label { fill: #b1bac4; font-size: 9px; pointer-events: none; text-anchor: end; }
-.collapse-badge { fill: #f0e040; font-size: 11px; pointer-events: none; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
 .edge { fill: none; stroke: #30363d; stroke-width: 1.5; transition: stroke-opacity 0.15s, stroke-width 0.15s; }
 .edge.calls { stroke: #3fb950; }
 .edge.route { stroke: #58a6ff; }
-.edge.contains { stroke: #484f58; stroke-width: 1; }
 .edge.db { stroke: #d29922; }
 .edge.validates { stroke: #8957e5; }
-.edge.highlighted { stroke-width: 3; stroke-opacity: 1; filter: drop-shadow(0 0 4px currentColor); }
-.edge.dimmed { stroke-opacity: 0.08; }
+.edge.contains { stroke: #484f58; }
+.edge.highlighted { stroke-opacity: 1 !important; stroke-width: 2.5 !important; }
+.edge.dimmed { stroke-opacity: 0.05 !important; }
+.node-circle { stroke-width: 1.5; transition: stroke 0.15s, opacity 0.15s; }
+.node-circle.selected { stroke: #f0e040; stroke-width: 3; }
+.node-box.dimmed { opacity: 0.15; }
 .col-label { fill: #8b949e; font-size: 13px; font-weight: 600; text-anchor: middle; text-transform: uppercase; letter-spacing: 1px; }
-.col-line { stroke: #21262d; stroke-width: 1; stroke-dasharray: 4 4; }
 .legend { position: absolute; bottom: 12px; left: 12px; background: #161b22ee; border: 1px solid #30363d; border-radius: 6px; padding: 10px; font-size: 11px; }
 .legend .row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
 .legend .swatch { width: 14px; height: 3px; border-radius: 2px; }
@@ -169,11 +164,13 @@ function buildGraph() {
   let idc = 0;
   function nid() { return 'n' + (idc++); }
 
+  function asArr(v) { return Array.isArray(v) ? v : (v ? Object.values(v) : []); }
+
   // Endpoint nodes
-  (SCAN.endpoints || []).forEach(ep => {
+  asArr(SCAN.endpoints).forEach(ep => {
     const id = nid();
     const node = {
-      id, type: 'endpoint', label: ep.path.slice(0, 28),
+      id, type: 'endpoint', label: (ep.path || '').slice(0, 28),
       method: ep.method, path: ep.path, file: ep.file, line: ep.line,
       auth: ep.auth, etype: ep.type,
       _kind: 'endpoint',
@@ -182,10 +179,10 @@ function buildGraph() {
   });
 
   // Controller/business logic nodes
-  (SCAN.business_logic || []).forEach(bl => {
+  asArr(SCAN.business_logic).forEach(bl => {
     const id = nid();
     const node = {
-      id, type: 'logic', label: bl.name.slice(0, 24),
+      id, type: 'logic', label: (bl.name || '').slice(0, 24),
       name: bl.name, file: bl.file, line: bl.line,
       ltype: bl.type, kind: bl.kind,
       _kind: 'logic',
@@ -194,10 +191,10 @@ function buildGraph() {
   });
 
   // Validation nodes
-  (SCAN.validations || []).slice(0, 60).forEach(v => {
+  asArr(SCAN.validations).slice(0, 60).forEach(v => {
     const id = nid();
     const node = {
-      id, type: 'validation', label: (v.field || v.rule || 'validate').slice(0, 22),
+      id, type: 'validation', label: ((v.field || v.rule) || 'validate').slice(0, 22),
       file: v.file, line: v.line, rule: v.rule, field: v.field,
       raw: v.raw, vkind: v.kind,
       _kind: 'validation',
@@ -206,23 +203,23 @@ function buildGraph() {
   });
 
   // Database table nodes
-  const tables = SCAN.database?.tables || {};
-  Object.entries(tables).forEach(([name, info]) => {
+  Object.entries(SCAN.database?.tables || {}).forEach(([name, info]) => {
+    if (typeof info !== 'object') return;
     const id = nid();
     const node = {
       id, type: 'table', label: name,
       file: info.file, line: info.line,
-      columns: info.columns || [],
+      columns: Array.isArray(info.columns) ? info.columns : [],
       _kind: 'table',
     };
     NODES.push(node); NODE_MAP[id] = node;
   });
 
   // DB query nodes
-  (SCAN.database?.queries || []).slice(0, 40).forEach(q => {
+  asArr(SCAN.database?.queries).slice(0, 40).forEach(q => {
     const id = nid();
     const node = {
-      id, type: 'query', label: (q.table || 'query').slice(0, 20),
+      id, type: 'query', label: ((q.table) || 'query').slice(0, 20),
       file: q.file, line: q.line, table: q.table, operation: q.operation,
       _kind: 'query',
     };
@@ -230,10 +227,10 @@ function buildGraph() {
   });
 
   // Form nodes
-  (SCAN.forms || []).forEach(f => {
+  asArr(SCAN.forms).forEach(f => {
     const id = nid();
     const node = {
-      id, type: 'form', label: (f.action || f.type).slice(0, 22),
+      id, type: 'form', label: ((f.action || f.type) || '').slice(0, 22),
       file: f.file, line: f.line, action: f.action, ftype: f.type,
       _kind: 'form',
     };
@@ -330,77 +327,48 @@ const TYPE_LABELS = {
 };
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
-const MARGIN = { top: 60, right: 80, bottom: 40, left: 80 };
-const NODE_W = 160;
-const NODE_H = 36;
-const LAYER_GAP = 240;
-const NODE_GAP = 12;
+const NODE_R = 8;          // node radius for force collision
+const NODE_W = 140;        // rect width (for detail display fallback)
+const NODE_H = 28;          // rect height
 
 let currentView = 'flow';
 let collapsedNodes = new Set();
 let selectedNode = null;
 let filteredNodes = [];
 let filteredEdges = [];
+let simulation = null;
+let zoomBehavior = null;
 
-function getFlowLayers() {
-  const layers = [[], [], [], [], []];
-  const placed = new Set();
-
-  // Layer 0: forms
-  filteredNodes.filter(n => n._kind === 'form').forEach(n => {
-    layers[0].push(n); placed.add(n.id);
-  });
-
-  // Layer 1: endpoints
-  filteredNodes.filter(n => n._kind === 'endpoint').forEach(n => {
-    layers[1].push(n); placed.add(n.id);
-  });
-
-  // Layer 2: logic
-  filteredNodes.filter(n => n._kind === 'logic').forEach(n => {
-    layers[2].push(n); placed.add(n.id);
-  });
-
-  // Layer 3: validation + query
-  filteredNodes.filter(n => n._kind === 'validation' || n._kind === 'query').forEach(n => {
-    layers[3].push(n); placed.add(n.id);
-  });
-
-  // Layer 4: tables
-  filteredNodes.filter(n => n._kind === 'table').forEach(n => {
-    layers[4].push(n); placed.add(n.id);
-  });
-
-  // Unplaced nodes → layer 2
-  filteredNodes.forEach(n => {
-    if (!placed.has(n.id)) layers[2].push(n);
-  });
-
-  return layers;
+// ─── View filtering ─────────────────────────────────────────────────────────
+function getViewNodes() {
+  if (currentView === 'db') {
+    return filteredNodes.filter(n => n._kind === 'table' || n._kind === 'query');
+  } else if (currentView === 'validation') {
+    return filteredNodes.filter(n => n._kind === 'endpoint' || n._kind === 'logic' || n._kind === 'validation');
+  }
+  // flow = all
+  return [...filteredNodes];
 }
 
-function getDBLayers() {
-  const layers = [[], []];
-  filteredNodes.filter(n => n._kind === 'table').forEach(n => layers[0].push(n));
-  filteredNodes.filter(n => n._kind === 'query').forEach(n => layers[1].push(n));
-  return layers;
+function getViewEdges(nodeIds) {
+  const idSet = new Set(nodeIds.map(n => n.id));
+  return filteredEdges.filter(e => idSet.has(e.source) && idSet.has(e.target));
 }
 
-function getValidationLayers() {
-  const layers = [[], []];
-  filteredNodes.filter(n => n._kind === 'endpoint' || n._kind === 'logic').forEach(n => layers[0].push(n));
-  filteredNodes.filter(n => n._kind === 'validation').forEach(n => layers[1].push(n));
-  return layers;
-}
-
+// ─── Render: D3 Force-Directed ──────────────────────────────────────────────
 function render() {
-  const svg = d3.select('#canvas');
-  svg.selectAll('*').remove();
-  const width = svg.node().clientWidth;
-  const height = svg.node().clientHeight;
+  const svgEl = document.getElementById('canvas');
+  const width = svgEl.clientWidth;
+  const height = svgEl.clientHeight;
 
-  // Arrowhead markers
+  // Clear everything
+  d3.select('#canvas').selectAll('*').remove();
+  if (simulation) { simulation.stop(); simulation = null; }
+
+  const svg = d3.select('#canvas');
   const defs = svg.append('defs');
+
+  // Arrowhead markers — one per edge relation color
   const edgeColors = [
     ['arrow-calls', '#3fb950'],
     ['arrow-route', '#58a6ff'],
@@ -411,167 +379,145 @@ function render() {
   ];
   edgeColors.forEach(([name, color]) => {
     defs.append('marker').attr('id', name).attr('viewBox', '0 -5 10 10')
-      .attr('refX', 10).attr('refY', 0).attr('markerWidth', 7).attr('markerHeight', 7)
+      .attr('refX', 12).attr('refY', 0).attr('markerWidth', 6).attr('markerHeight', 6)
       .attr('orient', 'auto-start-reverse')
       .append('path').attr('d', 'M0,-5 L10,0 L0,5').attr('fill', color);
   });
 
-  // Layers
-  let layers;
-  let labels;
-  if (currentView === 'flow') {
-    layers = getFlowLayers();
-    labels = ['Form/Page', 'Endpoint', 'Logic', 'Validate/Query', 'Database'];
-  } else if (currentView === 'db') {
-    layers = getDBLayers();
-    labels = ['Tables', 'Queries'];
-  } else {
-    layers = getValidationLayers();
-    labels = ['Endpoint/Logic', 'Validation'];
-  }
+  // Root group for zoom/pan
+  const root = svg.append('g').attr('class', 'zoom-root');
 
-  // Column labels + lines
-  labels.forEach((l, i) => {
-    svg.append('text').attr('x', MARGIN.left + i * LAYER_GAP + NODE_W/2)
-      .attr('y', 28).attr('text-anchor', 'middle').attr('class', 'col-label').text(l);
-    svg.append('line').attr('x1', MARGIN.left + i * LAYER_GAP)
-      .attr('y1', 40).attr('x2', MARGIN.left + i * LAYER_GAP).attr('y2', height)
-      .attr('class', 'col-line');
+  // Zoom behavior
+  zoomBehavior = d3.zoom().scaleExtent([0.05, 8])
+    .filter(e => !e.target.closest('.node-box') || e.type !== 'dblclick')
+    .on('zoom', (e) => root.attr('transform', e.transform));
+  svg.call(zoomBehavior);
+  svg.on('dblclick.zoom', null);
+
+  const edgeLayer = root.append('g').attr('class', 'edges');
+  const nodeLayer = root.append('g').attr('class', 'nodes');
+
+  // Get visible nodes (respect collapse)
+  const viewNodes = getViewNodes();
+  const visibleNodes = viewNodes.filter(n => {
+    if (collapsedNodes.has(n.id)) return true;
+    const parents = (IN_EDGES[n.id] || []).map(eid => {
+      const e = EDGES.find(x => x.id === eid);
+      return e ? e.source : null;
+    });
+    return !parents.some(p => collapsedNodes.has(p));
   });
-
-  const g = svg.append('g').attr('transform', `translate(${MARGIN.left},${MARGIN.top})`);
-  const edgeLayer = g.append('g');
-  const nodeLayer = g.append('g');
-
-  // Positions
-  const positions = {};
-  const visibleLayers = layers.map(layer =>
-    layer.filter(n => {
-      if (collapsedNodes.has(n.id)) return true;
-      const parents = (IN_EDGES[n.id] || []).map(eid => {
-        const e = EDGES.find(e => e.id === eid);
-        return e ? e.source : null;
-      });
-      return !parents.some(p => collapsedNodes.has(p));
-    })
+  const visibleIds = new Set(visibleNodes.map(n => n.id));
+  const visibleEdges = getViewEdges(visibleNodes).filter(e =>
+    visibleIds.has(e.source) && visibleIds.has(e.target) &&
+    !collapsedNodes.has(e.source) && !collapsedNodes.has(e.target)
   );
 
-  visibleLayers.forEach((layer, li) => {
-    if (!layer || layer.length === 0) return;
-    const totalH = layer.length * (NODE_H + NODE_GAP) - NODE_GAP;
-    const startY = Math.max(0, (height - MARGIN.top - MARGIN.bottom - totalH) / 2);
-    layer.forEach((node, ni) => {
-      positions[node.id] = { x: li * LAYER_GAP, y: startY + ni * (NODE_H + NODE_GAP) };
-    });
-  });
+  // Build D3-compatible copies (force sim mutates these)
+  const simNodes = visibleNodes.map(n => ({ ...n }));
+  const simEdges = visibleEdges.map(e => ({ ...e }));
 
   // Edges
-  filteredEdges.forEach(e => {
-    const sp = positions[e.source];
-    const tp = positions[e.target];
-    if (!sp || !tp) return;
+  const link = edgeLayer.selectAll('path')
+    .data(simEdges)
+    .enter().append('path')
+      .attr('class', d => `edge ${d.relation}`)
+      .attr('data-source', d => d.source)
+      .attr('data-target', d => d.target)
+      .attr('marker-end', d => `url(#arrow-${d.relation === 'contains' ? 'contains' : d.relation})`)
+      .style('fill', 'none')
+      .style('stroke-opacity', 0.4);
 
-    // Skip if either endpoint collapsed
-    if (collapsedNodes.has(e.source) || collapsedNodes.has(e.target)) return;
+  // Nodes — use circle + label
+  const nodeG = nodeLayer.selectAll('g.node-box')
+    .data(simNodes, d => d.id)
+    .enter().append('g')
+      .attr('class', 'node-box')
+      .style('cursor', 'pointer')
+      .on('click', (ev, d) => { ev.stopPropagation(); selectNode(d); })
+      .on('dblclick', function(ev, d) {
+        ev.stopPropagation();
+        if ((OUT_EDGES[d.id] || []).length > 0) toggleCollapse(d.id);
+      })
+      .on('mouseover', function(ev, d) {
+        d3.select(this).select('circle').attr('stroke-width', 3);
+        showTooltip(ev, d);
+      })
+      .on('mouseout', function() {
+        d3.select(this).select('circle').attr('stroke-width', 1.5);
+        hideTooltip();
+      });
 
-    const cls = `edge ${e.relation}`;
-    const marker = `arrow-${e.relation === 'contains' ? 'contains' : e.relation}`;
-    const startX = sp.x + NODE_W;
-    const startY2 = sp.y + NODE_H/2;
-    const endX = tp.x;
-    const endY = tp.y + NODE_H/2;
+  nodeG.append('circle')
+    .attr('class', 'node-circle')
+    .attr('r', d => NODE_R + Math.min(6, ((OUT_EDGES[d.id]||[]).length + (IN_EDGES[d.id]||[]).length) / 3))
+    .attr('fill', d => (TYPE_COLORS[d._kind] || '#484f58') + '33')
+    .attr('stroke', d => TYPE_COLORS[d._kind] || '#484f58')
+    .attr('stroke-width', 1.5);
 
-    edgeLayer.append('path')
-      .attr('class', cls)
-      .attr('data-source', e.source)
-      .attr('data-target', e.target)
-      .attr('marker-end', `url(#${marker})`)
-      .attr('d', `M${startX},${startY2} C${startX+40},${startY2} ${endX-40},${endY} ${endX},${endY}`)
-      .style('stroke-opacity', 0.5);
-  });
-
-  // Nodes
-  visibleLayers.forEach((layer, li) => {
-    if (!layer || layer.length === 0) return;
-    const totalH = layer.length * (NODE_H + NODE_GAP) - NODE_GAP;
-    const startY = Math.max(0, (height - MARGIN.top - MARGIN.bottom - totalH) / 2);
-
-    layer.forEach((node, ni) => {
-      const x = li * LAYER_GAP;
-      const y = startY + ni * (NODE_H + NODE_GAP);
-      const isCollapsed = collapsedNodes.has(node.id);
-      const hasChildren = (OUT_EDGES[node.id] || []).length > 0;
-      const color = TYPE_COLORS[node._kind] || '#484f58';
-      const typeLabel = TYPE_LABELS[node._kind] || '';
-
-      const ng = nodeLayer.append('g')
-        .attr('class', 'node-box')
-        .attr('transform', `translate(${x},${y})`)
-        .datum(node)
-        .on('click', (ev) => { ev.stopPropagation(); selectNode(node); })
-        .on('dblclick', function(ev) {
-          ev.stopPropagation();
-          if (hasChildren) toggleCollapse(node.id);
-        })
-        .on('mouseover', function(ev) {
-          d3.select(this).select('rect').attr('stroke-width', 2.5);
-          showTooltip(ev, node);
-        })
-        .on('mouseout', function() {
-          d3.select(this).select('rect').attr('stroke-width', 1.5);
-          hideTooltip();
-        });
-
-      ng.append('rect')
-        .attr('class', `node-rect${isCollapsed ? ' collapsed' : ''}`)
-        .attr('width', NODE_W).attr('height', NODE_H)
-        .attr('fill', color + '22')
-        .attr('stroke', color);
-
-      // Method badge for endpoints
-      if (node.method) {
-        ng.append('text')
-          .attr('x', 8).attr('y', NODE_H/2)
-          .attr('class', 'node-label')
-          .attr('text-anchor', 'start')
-          .attr('fill', color)
-          .style('font-weight', '700')
-          .style('font-size', '9px')
-          .text(node.method.slice(0, 4).toUpperCase());
-      }
-
-      ng.append('text')
-        .attr('class', 'node-text')
-        .attr('x', NODE_W/2 + 10).attr('y', NODE_H/2)
-        .text(node.label);
-
-      // Type label
-      ng.append('text')
-        .attr('class', 'node-label')
-        .attr('x', NODE_W - 4).attr('y', 10)
-        .attr('fill', '#b1bac4')
-        .text(typeLabel);
-
-      // Collapse badge
-      if (hasChildren) {
-        ng.append('text')
-          .attr('class', 'collapse-badge')
-          .attr('x', NODE_W - 14).attr('y', NODE_H/2)
-          .text(isCollapsed ? '▶' : '▼');
-      }
+  nodeG.append('text')
+    .attr('class', 'node-label-force')
+    .attr('x', d => NODE_R + Math.min(6, ((OUT_EDGES[d.id]||[]).length + (IN_EDGES[d.id]||[]).length) / 3) + 4)
+    .attr('y', 3)
+    .attr('text-anchor', 'start')
+    .style('font-size', '10px')
+    .style('fill', '#c9d1d9')
+    .style('pointer-events', 'none')
+    .text(d => {
+      const lbl = d.label || d.name || d.id;
+      return lbl.length > 28 ? lbl.slice(0, 27) + '…' : lbl;
     });
+
+  // Type badge
+  nodeG.append('text')
+    .attr('class', 'type-badge-force')
+    .attr('x', 0).attr('y', -NODE_R - 4)
+    .attr('text-anchor', 'middle')
+    .style('font-size', '8px')
+    .style('fill', d => TYPE_COLORS[d._kind] || '#484f58')
+    .style('pointer-events', 'none')
+    .style('font-weight', '600')
+    .text(d => TYPE_LABELS[d._kind] || '');
+
+  // Drag
+  const drag = d3.drag()
+    .on('start', (ev, d) => { if (!ev.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+    .on('drag',  (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+    .on('end',   (ev, d) => { if (!ev.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; });
+  nodeG.call(drag);
+
+  // Force simulation
+  simulation = d3.forceSimulation(simNodes)
+    .force('link', d3.forceLink(simEdges).id(d => d.id).distance(d => 50 + Math.random() * 40).strength(0.15))
+    .force('charge', d3.forceManyBody().strength(-80))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(d => NODE_R + 12))
+    .force('x', d3.forceX(width / 2).strength(0.03))
+    .force('y', d3.forceY(height / 2).strength(0.03));
+
+  simulation.on('tick', () => {
+    link
+      .attr('d', d => {
+        const sx = d.source.x, sy = d.source.y;
+        const tx = d.target.x, ty = d.target.y;
+        const dx = tx - sx, dy = ty - sy;
+        const dr = Math.sqrt(dx*dx + dy*dy) * 1.5;
+        return `M${sx},${sy}A${dr},${dr} 0 0,1 ${tx},${ty}`;
+      });
+
+    nodeG.attr('transform', d => `translate(${d.x},${d.y})`);
   });
 
   // Stats
   document.getElementById('stats').textContent =
-    `${NODES.length} nodes · ${EDGES.length} edges · ${collapsedNodes.size} collapsed`;
+    `${visibleNodes.length} nodes · ${visibleEdges.length} edges · ${collapsedNodes.size} collapsed`;
 }
 
 // ─── Selection + highlight ──────────────────────────────────────────────────
 function selectNode(node) {
   selectedNode = node;
-  d3.selectAll('.node-rect').classed('selected', false);
-  d3.selectAll('.node-box').filter(d => d && d.id === node.id).select('rect').classed('selected', true);
+  d3.selectAll('.node-circle').classed('selected', false);
+  d3.selectAll('.node-box').filter(d => d && d.id === node.id).select('circle').classed('selected', true);
 
   // Highlight connected
   const connected = new Set([node.id]);
@@ -608,7 +554,7 @@ function toggleCollapse(nodeId) {
 
 function closeDetail() {
   document.getElementById('detail').classList.remove('visible');
-  d3.selectAll('.node-rect').classed('selected', false);
+  d3.selectAll('.node-circle').classed('selected', false);
   selectedNode = null;
   clearHighlight();
 }
@@ -814,21 +760,10 @@ function setView(view) {
   render();
 }
 
-// ─── Zoom + pan ──────────────────────────────────────────────────────────────
-function initZoom() {
-  const svg = d3.select('#canvas');
-  const zoom = d3.zoom().scaleExtent([0.05, 8])
-    .filter(e => !e.target.closest('.node-box') || e.type !== 'dblclick')
-    .on('zoom', e => svg.attr('transform', e.transform));
-  svg.call(zoom);
-  svg.on('dblclick.zoom', null);
-}
-
 // ─── Init ────────────────────────────────────────────────────────────────────
 buildGraph();
 filteredNodes = [...NODES];
 filteredEdges = [...EDGES];
-initZoom();
 render();
 renderSidebar();
 
