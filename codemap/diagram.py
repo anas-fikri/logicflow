@@ -201,6 +201,12 @@ const HUMAN_LABELS = {
   'users': 'Manajemen User', 'profile': 'Profil', 'mail': 'Mail',
   'orders': 'Pesanan', 'products': 'Produk', 'reports': 'Laporan',
   'transactions': 'Transaksi', 'invoices': 'Invoice', 'payments': 'Pembayaran',
+  'vault': 'Brankas', 'unlock': 'Buka Kunci', 'org': 'Organisasi',
+  'login': 'Login', 'register': 'Daftar', 'help': 'Bantuan',
+  'error': 'Error', 'contacts': 'Kontak', 'calendar': 'Kalender',
+  'folder': 'Folder', 'rules': 'Aturan', 'send': 'Kirim', 'preferences': 'Preferensi',
+  'stats': 'Statistik', 'password': 'Password', 'change-password': 'Ubah Password',
+  'accept-organization': 'Terima Undangan', 'system': 'Sistem',
 };
 
 const HUMAN_METHODS = {
@@ -218,8 +224,12 @@ const KNOWN_ACTIONS = {
 
 function humanLabel(path) {
   if (!path) return '—';
-  const key = path.toLowerCase().replace(/^\{(\w+?)s?\}$/, '$1s').replace(/^\{(\w+)\}$/, '$1');
-  return HUMAN_LABELS[key] || HUMAN_LABELS[path] || key.charAt(0).toUpperCase() + key.slice(1);
+  let key = path.toLowerCase().replace(/^\{(\w+?)s?\}$/, '$1s').replace(/^\{(\w+)\}$/, '$1');
+  if (HUMAN_LABELS[key]) return HUMAN_LABELS[key];
+  if (HUMAN_LABELS[path]) return HUMAN_LABELS[path];
+  if (key === 'catchall') return 'Lainnya';
+  // Auto-pretty: hyphens/snake_case → Title Case
+  return key.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function humanAction(ep) {
@@ -353,7 +363,16 @@ function buildUserFlowGraph() {
     let start = 0;
     while (start < parts.length && /^(api|v\d+)$/i.test(parts[start])) start++;
     const seg = parts[start] || parts[0] || 'root';
-    return seg.replace(/^\{(\w+?)s?\}$/, '$1s').replace(/^\{(\w+)\}$/, '$1');
+    // Strip Vue Router /catch-all pattern
+    let clean = seg.replace(/:pathMatch\([^)]+\)/, 'catchall');
+    // Strip leading colon (Vue path params like :id)
+    clean = clean.replace(/^:/, '');
+    // Strip trailing wildcard chars
+    clean = clean.replace(/\*+$/, '');
+    // Strip generic wildcard
+    const final = (clean === '*' || clean === '(.*)' || clean === '(*)' || clean === '' || clean === 'catchall') ? 'catchall' : clean;
+    if (final === 'root') return 'root';
+    return final.replace(/^\{(\w+?)s?\}$/, '$1s').replace(/^\{(\w+)\}$/, '$1').replace(/-\d+$/, '');
   }
   const menus = {};
   asArr(SCAN.endpoints).forEach(ep => {
@@ -440,7 +459,16 @@ function buildBusinessTree() {
     let start = 0;
     while (start < parts.length && /^(api|v\d+)$/i.test(parts[start])) start++;
     const seg = parts[start] || parts[0] || 'root';
-    return seg.replace(/^\{(\w+?)s?\}$/, '$1s').replace(/^\{(\w+)\}$/, '$1');
+    // Strip Vue Router /catch-all pattern
+    let clean = seg.replace(/:pathMatch\([^)]+\)/, 'catchall');
+    // Strip leading colon (Vue path params like :id)
+    clean = clean.replace(/^:/, '');
+    // Strip trailing wildcard chars
+    clean = clean.replace(/\*+$/, '');
+    // Strip generic wildcard
+    const final = (clean === '*' || clean === '(.*)' || clean === '(*)' || clean === '' || clean === 'catchall') ? 'catchall' : clean;
+    if (final === 'root') return 'root';
+    return final.replace(/^\{(\w+?)s?\}$/, '$1s').replace(/^\{(\w+)\}$/, '$1').replace(/-\d+$/, '');
   }
 
   const appName = document.title.replace(' — CodeMap', '') || 'App';

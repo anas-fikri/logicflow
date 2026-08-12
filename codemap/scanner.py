@@ -161,6 +161,11 @@ ROUTE_PATTERNS = {
         (r"(?:app|router)\s*\.\s*(get|post|put|patch|delete)\s*\(\s*`(.*?)`", "express_template"),
         # Next.js
         (r"(?:pages/|app/|router\s*\.\s*(?:get|post))", "nextjs"),
+        # Vue Router — path: '/login' inside routes array
+        (r"path:\s*['\"]([^'\"]+)['\"]", "vue_router"),
+        # React Router — <Route path="/login"
+        (r"<Route\s+path=['\"]([^'\"]+)['\"]", "react_router"),
+        # SvelteKit — file-based routing, no explicit pattern needed
     ],
     "python": [
         # Flask
@@ -273,7 +278,7 @@ class CodeScanner:
         self._extract_forms(content, rel, lang)
 
         # Language-specific extraction
-        if lang in ("javascript", "typescript"):
+        if lang in ("javascript", "typescript", "vue", "svelte"):
             self._scan_js(content, rel, lang)
         elif lang == "python":
             self._scan_py(content, rel)
@@ -316,6 +321,18 @@ class CodeScanner:
                         "file": rel,
                         "line": content[:match.start()].count("\n") + 1,
                         "method": method if method not in ("any", "") else "MIXED",
+                        "path": path,
+                        "type": ptype,
+                        "auth": self._detect_auth(content, match.start()),
+                    })
+                elif len(groups) == 1 and groups[0]:
+                    # Single-group patterns (Vue Router, React Router, Django)
+                    path = groups[0]
+                    self.result["endpoints"].append({
+                        "id": self._node_id(),
+                        "file": rel,
+                        "line": content[:match.start()].count("\n") + 1,
+                        "method": "GET",
                         "path": path,
                         "type": ptype,
                         "auth": self._detect_auth(content, match.start()),
