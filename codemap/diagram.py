@@ -323,13 +323,16 @@ function buildUserFlowGraph() {
   function ufid() { return 'uf' + (idc++); }
   function ufeid() { return 'ufe' + (idc++); }
 
-  // Helper: extract menu name from path
+  // Helper: extract menu name from path — group by first meaningful segment
   function menuName(path) {
     const parts = (path || '').split('/').filter(Boolean);
-    if (parts.length <= 1) return parts[0] || 'root';
-    // Skip 'api' prefix
-    const start = parts[0] === 'api' ? 1 : 0;
-    return parts.slice(start, start + 2).join('/') || parts[0];
+    if (parts.length === 0) return 'root';
+    // Skip 'api' / 'v1' / 'v2' prefixes
+    let start = 0;
+    while (start < parts.length && /^(api|v\d+)$/i.test(parts[start])) start++;
+    const seg = parts[start] || parts[0] || 'root';
+    // Strip dynamic params: {template} → templates, {certificate} → certificates
+    return seg.replace(/^\{(\w+?)s?\}$/, '$1s').replace(/^\{(\w+)\}$/, '$1');
   }
 
   // 1. Group endpoints by path prefix → Menu nodes

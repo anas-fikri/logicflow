@@ -390,6 +390,8 @@ class CodeScanner:
         for pattern, ptype in ROUTE_PATTERNS["php"]:
             for match in re.finditer(pattern, content, re.IGNORECASE):
                 groups = match.groups()
+                if not groups:
+                    continue
                 method = (groups[0] or "").lower()
                 path = groups[1] if len(groups) > 1 else ""
                 if path or method:
