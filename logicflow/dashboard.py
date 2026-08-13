@@ -94,7 +94,7 @@ footer { border-top: 1px solid #30363d; padding: 16px 32px; text-align: center; 
   <!-- Multi-Project Guide -->
   <section class="guide-banner">
     <h2>🗺️ Cara Pengelolaan Multi-Project di LogicFlow Dashboard</h2>
-    <p>LogicFlow menyimpan seluruh metadata project di registry <code>~/.logicflow/projects.json</code>. Setiap project yang discan akan **otomatis menghasilkan 2 mode visualisasi** sekaligus (Mode Awam & Mode Developer).</p>
+    <p>LogicFlow menyimpan seluruh metadata project di registry <code>~/.logicflow/projects.json</code>. Setiap project yang discan akan **otomatis menghasilkan 2 mode visualisasi** sekaligus (Business Flow & Mode Developer).</p>
     <div class="guide-steps">
       <div class="step-card">
         <div class="step-num">1. Tambah Project Baru</div>
@@ -149,7 +149,7 @@ footer { border-top: 1px solid #30363d; padding: 16px 32px; text-align: center; 
       <div class="legend-item">
         <div class="term">BA</div>
         <div class="full">Business Analyst</div>
-        <div class="desc">Analis Bisnis yang menggunakan Mode Awam (Business Flow) untuk memahami alur proses aplikasi.</div>
+        <div class="desc">Analis Bisnis yang menggunakan Mode Business Flow untuk memahami alur proses aplikasi.</div>
       </div>
       <div class="legend-item">
         <div class="term">UI / UX</div>
@@ -258,7 +258,7 @@ class DashboardBuilder:
         </div>
       </div>
       <div class="card-actions">
-        <a href="{biz_url}" class="btn btn-biz">💼 Mode Awam (Business)</a>
+        <a href="{biz_url}" class="btn btn-biz">💼 Business Flow</a>
         <a href="{dev_url}" class="btn btn-dev">⚡ Mode Developer (Graph)</a>
       </div>
     </div>

@@ -1,7 +1,7 @@
 """LogicFlow Diagram — Split Dual-Mode HTML Diagram Builder.
 
 Modes:
-  business   Awam / BA mode: clean horizontal tree, card-based, Indonesian labels, high-level
+  business   BA / Non-tech mode: clean horizontal tree, card-based, Indonesian labels, high-level
   developer  Dev mode: force-directed graph with full technical detail (routes, DB, validations, functions)
 """
 
@@ -17,7 +17,7 @@ def load_d3():
     return ""
 
 
-# ─── Business Flow HTML Template (Non-Technical / Awam) ─────────────────────
+# ─── Business Flow HTML Template (Non-Technical / BA) ─────────────────────
 
 BUSINESS_TEMPLATE = r"""<!DOCTYPE html>
 <html lang="id">
@@ -127,7 +127,7 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
     <div class="title">
       <span>📊</span>
       <span>__TITLE__</span>
-      <span style="font-size:11px;color:#8b949e;font-weight:400">— Business Flow (Modus Awam)</span>
+      <span style="font-size:11px;color:#8b949e;font-weight:400">— Business Flow</span>
     </div>
     <div class="mode-switch">
       <button onclick="exportSVG()" class="mode-btn inactive" title="Export SVG vector">📥 SVG</button>
@@ -384,17 +384,16 @@ function renderTree() {
   const cardW = 190;
   const cardH = 36;
 
+  // Build key→node map for expand toggle from inner HTML
+  window._TREE_NODE_MAP = {};
+  nodes.forEach(d => { window._TREE_NODE_MAP[_nodeKey(d)] = d; });
+
   const nodeG = root_g.selectAll('.tree-node')
     .data(nodes).enter().append('g')
     .attr('class', 'tree-node')
     .attr('transform', d => `translate(${d.y},${d.x})`)
     .on('click', (ev, d) => {
       ev.stopPropagation();
-      if (d._children || (d.children && d.depth > 0)) {
-        if (d.children) { d._children = d.children; d.children = null; }
-        else { d.children = d._children; d._children = null; }
-        renderTree();
-      }
       selectNode(d);
     });
 
@@ -439,6 +438,7 @@ function buildCardHTML(d, isSelected) {
   if (type === 'table') icon = '🟡';
 
   const selClass = isSelected ? ' selected' : '';
+  const key = _nodeKey(d);
   let html = `<div class="card ${type}${selClass}">`;
   html += `<span class="card-icon">${icon}</span>`;
   html += `<span class="card-label">${label}</span>`;
@@ -446,10 +446,19 @@ function buildCardHTML(d, isSelected) {
   if (hasChildren) {
     const count = (d._children || d.children).length;
     html += `<span class="card-count">${count}</span>`;
-    html += `<span class="card-expand">${isCollapsed ? '▸' : '▾'}</span>`;
+    html += `<span class="card-expand" onclick="event.stopPropagation();toggleNode('${key}')" title="Buka/tutup cabang" style="cursor:pointer;padding:2px 4px;border-radius:3px;">${isCollapsed ? '▸' : '▾'}</span>`;
   }
   html += '</div>';
   return html;
+}
+
+function toggleNode(key) {
+  const d = window._TREE_NODE_MAP && window._TREE_NODE_MAP[key];
+  if (!d) return;
+  if (d.children) { d._children = d.children; d.children = null; }
+  else if (d._children) { d.children = d._children; d._children = null; }
+  else return;
+  renderTree();
 }
 
 function _applyLinkHighlight() {

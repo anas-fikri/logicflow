@@ -288,7 +288,7 @@ def cmd_project_open(args):
         url_biz = f"file://{os.path.abspath(biz_path)}"
         url_dev = f"file://{os.path.abspath(dev_path)}"
         print(f"Opening Dual-Mode Diagrams for '{name}':")
-        print(f"  💼 Mode Awam (Business): {url_biz}")
+        print(f"  💼 Business Flow: {url_biz}")
         print(f"  ⚡ Mode Developer Graph: {url_dev}")
         subprocess.Popen(["open", url_biz], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
