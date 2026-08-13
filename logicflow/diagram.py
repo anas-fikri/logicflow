@@ -232,6 +232,17 @@ const KNOWN_ACTIONS = {
   'rundown': 'Rundown', 'health': 'System Health', 'settings': 'Pengaturan',
 };
 
+// XSS-safe HTML escaping for dynamic content in innerHTML
+function _esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function humanLabel(path) {
   if (!path) return '—';
   let key = path.toLowerCase().replace(/^\{(\w+?)s?\}$/, '$1s').replace(/^\{(\w+)\}$/, '$1');
@@ -300,6 +311,22 @@ function buildTree() {
   const appTitle = document.title.split(' — ')[0] || 'App';
   const root = { name: appTitle, type: 'root', children: [] };
   
+  // OPT-02: Pre-index validations and DB queries by file for O(1) lookup
+  const validationsByFile = {};
+  asArr(SCAN.validations).forEach(v => {
+    if (v.file) {
+      if (!validationsByFile[v.file]) validationsByFile[v.file] = [];
+      validationsByFile[v.file].push(v);
+    }
+  });
+  const queriesByFile = {};
+  asArr(SCAN.database?.queries).forEach(q => {
+    if (q.file) {
+      if (!queriesByFile[q.file]) queriesByFile[q.file] = [];
+      queriesByFile[q.file].push(q);
+    }
+  });
+
   // Stages map
   const stageNodes = {};
   BUSINESS_STAGES.forEach(st => {
@@ -343,7 +370,7 @@ function buildTree() {
 
     // Validations child
     const valSet = new Set();
-    asArr(SCAN.validations).filter(v => v.file === ep.file).forEach(v => {
+    (validationsByFile[ep.file] || []).forEach(v => {
       const key = (v.field || '') + ':' + (v.rule || '');
       if (!valSet.has(key)) {
         valSet.add(key);
@@ -359,7 +386,7 @@ function buildTree() {
 
     // DB Tables child
     const tblSet = new Set();
-    asArr(SCAN.database?.queries).filter(q => q.file === ep.file).forEach(q => {
+    (queriesByFile[ep.file] || []).forEach(q => {
       if (q.table && !tblSet.has(q.table)) {
         tblSet.add(q.table);
         const tblInfo = SCAN.database?.tables?.[q.table];
@@ -530,7 +557,7 @@ function buildCardHTML(d, isSelected) {
   const key = _nodeKey(d);
   let html = `<div class="card ${type}${stageClass}${selClass}">`;
   html += `<span class="card-icon">${icon}</span>`;
-  html += `<span class="card-label">${label}</span>`;
+  html += `<span class="card-label">${_esc(label)}</span>`;
   if (method) html += `<span class="card-method ${method}">${method}</span>`;
   if (hasChildren) {
     const count = (d._children || d.children).length;
@@ -603,8 +630,9 @@ function selectNode(d) {
     html += `<div class="section"><h4>Fitur Dalam Modul Ini (${children.length})</h4>`;
     children.forEach(c => {
       const k = _nodeKey(c);
-      const safeName = (c.data.name || '').replace(/'/g, "\\'");
-      html += `<div class="item-link" onclick="focusNodeByKey('${k}')">🔹 ${safeName}</div>`;
+      const safeName = _esc(c.data.name || '');
+      const safeKey = _esc(k);
+      html += `<div class="item-link" onclick="focusNodeByKey('${safeKey}')">🔹 ${safeName}</div>`;
     });
     html += '</div>';
   }
@@ -742,7 +770,7 @@ function renderSidebarTree() {
     item.dataset.key = _nodeKey(d);
     item.style.paddingLeft = (12 + d.depth * 12) + 'px';
     const { icon, label } = getNodeIconAndLabel(d);
-    item.innerHTML = `<span class="icon">${icon}</span><span class="label">${label}</span>`;
+    item.innerHTML = `<span class="icon">${_esc(icon)}</span><span class="label">${_esc(label)}</span>`;
     item.onclick = () => {
       // expand parents
       let parent = d.parent;
@@ -782,8 +810,8 @@ function filterTree(q) {
     if (nameMatch && methodMatch) {
       const item = document.createElement('div');
       item.className = 'tree-item';
-      item.innerHTML = `<span class="label">${d.data.name}</span>`;
-      if (d.data.method) item.innerHTML += `<span class="badge">${d.data.method}</span>`;
+      const lbl = document.createElement('span'); lbl.className = 'label'; lbl.textContent = d.data.name || ''; item.appendChild(lbl);
+      if (d.data.method) { const bdg = document.createElement('span'); bdg.className = 'badge'; bdg.textContent = d.data.method; item.appendChild(bdg); }
       item.onclick = () => selectNode(d);
       treeEl.appendChild(item);
     }
@@ -1225,7 +1253,7 @@ function renderSidebarList() {
   NODES.forEach(n => {
     const item = document.createElement('div');
     item.className = 'node-item';
-    item.innerHTML = `<span>${n.label}</span><span class="kind kind-${n.kind}">${n.kind}</span>`;
+    const sp = document.createElement('span'); sp.textContent = n.label || ''; item.appendChild(sp); const ksp = document.createElement('span'); ksp.className = 'kind kind-' + (n.kind || ''); ksp.textContent = n.kind || ''; item.appendChild(ksp);
     item.onclick = () => selectDevNode(n);
     list.appendChild(item);
   });
@@ -1257,7 +1285,7 @@ function filterGraph(q) {
   }).forEach(n => {
     const item = document.createElement('div');
     item.className = 'node-item';
-    item.innerHTML = `<span>${n.label}</span><span class="kind kind-${n.kind}">${n.kind}</span>`;
+    const sp = document.createElement('span'); sp.textContent = n.label || ''; item.appendChild(sp); const ksp = document.createElement('span'); ksp.className = 'kind kind-' + (n.kind || ''); ksp.textContent = n.kind || ''; item.appendChild(ksp);
     item.onclick = () => selectDevNode(n);
     list.appendChild(item);
   });
@@ -1342,10 +1370,19 @@ renderGraph();
 class DiagramBuilder:
     """Build interactive HTML diagram (business or developer mode)."""
 
-    def build(self, scan_result, title="LogicFlow", mode="business", dev_file=None, biz_file=None, dashboard_path=None):
+    @staticmethod
+    def _safe_scan_json(scan_result):
+        """Serialize scan data to JSON safe for embedding in <script> blocks.
+        Replaces '</script>' with '<\/script>' to prevent HTML injection
+        (VULN-01: scan data from scanned project could contain '</script>' strings)."""
+        raw = json.dumps(scan_result, ensure_ascii=False)
+        # Prevent premature </script> tag closure inside embedded JSON
+        return raw.replace("</script>", "<\/script>").replace("</Script>", "<\/Script>")
+
+    def build(self, scan_result, title="LogicFlow", mode="business", dev_file=None, biz_file=None, dashboard_path=None, _scan_json=None):
         """Build single mode HTML diagram."""
         d3_js = load_d3()
-        scan_json = json.dumps(scan_result, ensure_ascii=False)
+        scan_json = _scan_json if _scan_json is not None else self._safe_scan_json(scan_result)
         dash = dashboard_path or "../../dashboard.html"
 
         safe_title = html_lib.escape(title)
@@ -1366,7 +1403,9 @@ class DiagramBuilder:
             return html
 
     def build_both(self, scan_result, title="LogicFlow", dashboard_path=None):
-        """Build dual mode: returns (business_html, developer_html)."""
-        biz = self.build(scan_result, title=title, mode="business", dev_file="developer.html", biz_file="business.html", dashboard_path=dashboard_path)
-        dev = self.build(scan_result, title=title, mode="developer", dev_file="developer.html", biz_file="business.html", dashboard_path=dashboard_path)
+        """Build dual mode: returns (business_html, developer_html).
+        OPT-03: compute scan_json once and pass to both builds."""
+        scan_json = self._safe_scan_json(scan_result)
+        biz = self.build(scan_result, title=title, mode="business", dev_file="developer.html", biz_file="business.html", dashboard_path=dashboard_path, _scan_json=scan_json)
+        dev = self.build(scan_result, title=title, mode="developer", dev_file="developer.html", biz_file="business.html", dashboard_path=dashboard_path, _scan_json=scan_json)
         return biz, dev

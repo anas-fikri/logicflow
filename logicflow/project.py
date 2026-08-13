@@ -22,6 +22,7 @@ import sys
 import subprocess
 from pathlib import Path
 from datetime import datetime
+import tempfile
 
 REGISTRY_DIR = Path.home() / ".logicflow"
 REGISTRY_FILE = REGISTRY_DIR / "projects.json"
@@ -31,7 +32,7 @@ DASHBOARD_FILE = REGISTRY_DIR / "dashboard.html"
 
 def _load_registry():
     if REGISTRY_FILE.exists():
-        with open(REGISTRY_FILE) as f:
+        with open(REGISTRY_FILE, encoding="utf-8") as f:
             return json.load(f)
     return {"projects": {}}
 
@@ -39,8 +40,18 @@ def _load_registry():
 def _save_registry(reg):
     REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    with open(REGISTRY_FILE, "w") as f:
-        json.dump(reg, f, indent=2, ensure_ascii=False)
+    # Atomic write: write to temp file then replace to avoid corruption on interrupt
+    tmp_fd, tmp_path = tempfile.mkstemp(dir=REGISTRY_DIR, suffix=".tmp")
+    try:
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+            json.dump(reg, f, indent=2, ensure_ascii=False)
+        os.replace(tmp_path, REGISTRY_FILE)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
     _generate_dashboard(reg)
 
 
@@ -142,7 +153,7 @@ def cmd_project_scan(args):
     scanner = CodeScanner(root=source, exclude=exclude, project_name=name)
     result = scanner.scan()
 
-    with open(scan_file, "w") as f:
+    with open(scan_file, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
 
     print(f"  Scan JSON:   {scan_file} ({os.path.getsize(scan_file)} bytes)")
@@ -150,11 +161,11 @@ def cmd_project_scan(args):
     builder = DiagramBuilder()
     biz_html, dev_html = builder.build_both(result, title=p.get("title", name))
 
-    with open(biz_file, "w") as f:
+    with open(biz_file, "w", encoding="utf-8") as f:
         f.write(biz_html)
     print(f"  Business:    {biz_file} ({os.path.getsize(biz_file)} bytes)")
 
-    with open(dev_file, "w") as f:
+    with open(dev_file, "w", encoding="utf-8") as f:
         f.write(dev_html)
     print(f"  Developer:   {dev_file} ({os.path.getsize(dev_file)} bytes)")
 
@@ -203,7 +214,7 @@ def cmd_project_diagram(args):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from logicflow.diagram import DiagramBuilder
 
-    with open(scan_file) as f:
+    with open(scan_file, encoding="utf-8") as f:
         result = json.load(f)
 
     d = _project_dir(name)
@@ -213,9 +224,9 @@ def cmd_project_diagram(args):
     builder = DiagramBuilder()
     biz_html, dev_html = builder.build_both(result, title=p.get("title", name))
 
-    with open(biz_file, "w") as f:
+    with open(biz_file, "w", encoding="utf-8") as f:
         f.write(biz_html)
-    with open(dev_file, "w") as f:
+    with open(dev_file, "w", encoding="utf-8") as f:
         f.write(dev_html)
 
     reg["projects"][name]["business_diagram"] = biz_file
@@ -261,6 +272,15 @@ def cmd_project_remove(args):
     purge = getattr(args, "purge", False)
     if purge:
         d = _project_dir(name)
+        # SECURITY: prevent path traversal — ensure d is inside OUTPUT_DIR
+        try:
+            resolved = d.resolve()
+            if not str(resolved).startswith(str(OUTPUT_DIR.resolve())):
+                print(f"Error: refusing to delete '{d}' — outside output directory.")
+                sys.exit(1)
+        except Exception as e:
+            print(f"Error resolving path: {e}")
+            sys.exit(1)
         if d.exists():
             import shutil
             shutil.rmtree(d)
@@ -280,28 +300,35 @@ def cmd_project_open(args):
     p = reg["projects"][name]
     mode = getattr(args, "mode", "both") or "both"
 
+    def _safe_open_url(file_path):
+        """Open file:// URL safely — validate path is absolute and exists."""
+        abs_path = os.path.abspath(file_path)
+        if not os.path.isfile(abs_path):
+            print(f"Error: file not found: {abs_path}")
+            sys.exit(1)
+        url = f"file://{abs_path}"
+        subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return url
+
     if mode == "both":
         biz_path = p.get("business_diagram")
         dev_path = p.get("developer_diagram")
         if not biz_path or not os.path.isfile(biz_path):
             print(f"Error: diagrams for '{name}' not found. Run 'logicflow project scan {name}' first.")
             sys.exit(1)
-        url_biz = f"file://{os.path.abspath(biz_path)}"
-        url_dev = f"file://{os.path.abspath(dev_path)}"
         print(f"Opening Dual-Mode Diagrams for '{name}':")
+        url_biz = _safe_open_url(biz_path)
+        url_dev = _safe_open_url(dev_path)
         print(f"  💼 Business Flow: {url_biz}")
         print(f"  ⚡ Mode Developer Graph: {url_dev}")
-        subprocess.Popen(["open", url_biz], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
         target_key = "business_diagram" if mode == "business" else "developer_diagram"
         file_path = p.get(target_key)
         if not file_path or not os.path.isfile(file_path):
             print(f"Error: no {mode} diagram for '{name}'. Run 'logicflow project scan {name}' first.")
             sys.exit(1)
-
-        url = f"file://{os.path.abspath(file_path)}"
+        url = _safe_open_url(file_path)
         print(f"Opening {mode} diagram: {url}")
-        subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def cmd_project_dashboard(args):
@@ -313,7 +340,8 @@ def cmd_project_dashboard(args):
         print("Error: failed to generate dashboard.")
         sys.exit(1)
 
-    url = f"file://{os.path.abspath(DASHBOARD_FILE)}"
+    abs_path = os.path.abspath(DASHBOARD_FILE)
+    url = f"file://{abs_path}"
     print(f"Opening Dashboard: {url}")
     subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 

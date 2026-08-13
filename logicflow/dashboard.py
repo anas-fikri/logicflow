@@ -6,6 +6,7 @@ their stats, and links to open Business Flow or Developer Graph.
 
 import json
 from pathlib import Path
+import html as html_lib
 
 DASHBOARD_TEMPLATE = r"""<!DOCTYPE html>
 <html lang="id">
@@ -231,28 +232,43 @@ class DashboardBuilder:
             biz_url = f"output/{name}/business.html"
             dev_url = f"output/{name}/developer.html"
 
+            # Escape all user-controlled values to prevent XSS / HTML injection
+            safe_name = html_lib.escape(str(name))
+            safe_title = html_lib.escape(str(title))
+            safe_source = html_lib.escape(str(source))
+            safe_langs = html_lib.escape(str(langs))
+            safe_last = html_lib.escape(str(last))
+            safe_menus = html_lib.escape(str(menus))
+            safe_apis = html_lib.escape(str(apis))
+            safe_nodes = html_lib.escape(str(nodes))
+            # URL-encode project name for href safety (only alphanumeric + dash/underscore allowed)
+            import re as _re
+            safe_url_name = _re.sub(r'[^a-zA-Z0-9_\-]', '_', str(name))
+            biz_url = f"output/{safe_url_name}/business.html"
+            dev_url = f"output/{safe_url_name}/developer.html"
+
             card = f"""
-    <div class="project-card" data-name="{name}">
+    <div class="project-card" data-name="{safe_name}">
       <div>
         <div class="card-header">
-          <h2>{title}</h2>
-          <span class="lang-tag">{langs}</span>
+          <h2>{safe_title}</h2>
+          <span class="lang-tag">{safe_langs}</span>
         </div>
         <div class="card-meta">
-          <div class="path" title="{source}">📁 {source}</div>
-          <div>🕒 Pemindaian Terakhir: {last}</div>
+          <div class="path" title="{safe_source}">📁 {safe_source}</div>
+          <div>🕒 Pemindaian Terakhir: {safe_last}</div>
         </div>
         <div class="card-stats">
           <div class="stat-box">
-            <div class="num">{menus}</div>
+            <div class="num">{safe_menus}</div>
             <div class="lbl">Menu (UI)</div>
           </div>
           <div class="stat-box">
-            <div class="num">{apis}</div>
+            <div class="num">{safe_apis}</div>
             <div class="lbl">API</div>
           </div>
           <div class="stat-box">
-            <div class="num">{nodes}</div>
+            <div class="num">{safe_nodes}</div>
             <div class="lbl">Node</div>
           </div>
         </div>

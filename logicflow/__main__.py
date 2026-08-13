@@ -39,7 +39,7 @@ def cmd_scan(args):
     if args.format == "json":
         output = json.dumps(result, indent=2, ensure_ascii=False)
         if args.output:
-            with open(args.output, "w") as f:
+            with open(args.output, "w", encoding="utf-8") as f:
                 f.write(output)
             print(f"JSON written: {args.output} ({len(output)} bytes)")
         else:
@@ -47,7 +47,7 @@ def cmd_scan(args):
     elif args.format == "markdown":
         md = scanner.to_markdown(result)
         if args.output:
-            with open(args.output, "w") as f:
+            with open(args.output, "w", encoding="utf-8") as f:
                 f.write(md)
             print(f"Markdown written: {args.output} ({len(md)} bytes)")
         else:
@@ -55,9 +55,9 @@ def cmd_scan(args):
     elif args.format == "both":
         json_path = args.output or "logicflow.json"
         md_path = args.output.replace(".json", ".md") if args.output else "logicflow.md"
-        with open(json_path, "w") as f:
+        with open(json_path, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
-        with open(md_path, "w") as f:
+        with open(md_path, "w", encoding="utf-8") as f:
             f.write(scanner.to_markdown(result))
         print(f"JSON: {json_path} | Markdown: {md_path}")
 
@@ -65,7 +65,7 @@ def cmd_scan(args):
 def cmd_ai(args):
     """AI mode: generate natural documentation from scan data."""
     if args.scan_only:
-        with open(args.scan_only) as f:
+        with open(args.scan_only, encoding="utf-8") as f:
             scan_result = json.load(f)
     else:
         scanner = CodeScanner(
@@ -83,7 +83,7 @@ def cmd_ai(args):
     docs = documenter.generate(scan_result, context=args.context)
 
     if args.output:
-        with open(args.output, "w") as f:
+        with open(args.output, "w", encoding="utf-8") as f:
             f.write(docs)
         print(f"AI documentation written: {args.output} ({len(docs)} bytes)")
     else:
@@ -105,7 +105,7 @@ def cmd_diagram(args):
         )
         scan_result = scanner.scan()
     elif args.graph:
-        with open(args.graph) as f:
+        with open(args.graph, encoding="utf-8") as f:
             scan_result = json.load(f)
     elif args.source:
         proj_name = args.title or Path(args.source).resolve().name
@@ -128,16 +128,16 @@ def cmd_diagram(args):
         out_base = args.output or "logicflow"
         biz_path = f"{out_base}-business.html"
         dev_path = f"{out_base}-developer.html"
-        with open(biz_path, "w") as f:
+        with open(biz_path, "w", encoding="utf-8") as f:
             f.write(biz_html)
-        with open(dev_path, "w") as f:
+        with open(dev_path, "w", encoding="utf-8") as f:
             f.write(dev_html)
         print(f"Business Diagram:  {biz_path} ({len(biz_html)} bytes)")
         print(f"Developer Diagram: {dev_path} ({len(dev_html)} bytes)")
     else:
         html = builder.build(scan_result, title=title, mode=args.mode)
         out_path = args.output or f"logicflow-{args.mode}.html"
-        with open(out_path, "w") as f:
+        with open(out_path, "w", encoding="utf-8") as f:
             f.write(html)
         print(f"{args.mode.title()} Diagram: {out_path} ({len(html)} bytes)")
 
@@ -159,15 +159,15 @@ def cmd_full(args):
     dev_path = f"{base}-developer.html"
 
     # Save JSON
-    with open(json_path, "w") as f:
+    with open(json_path, "w", encoding="utf-8") as f:
         json.dump(scan_result, f, indent=2, ensure_ascii=False)
 
     # Save dual diagrams
     builder = DiagramBuilder()
     biz_html, dev_html = builder.build_both(scan_result, title=args.title or "LogicFlow")
-    with open(biz_path, "w") as f:
+    with open(biz_path, "w", encoding="utf-8") as f:
         f.write(biz_html)
-    with open(dev_path, "w") as f:
+    with open(dev_path, "w", encoding="utf-8") as f:
         f.write(dev_html)
 
     print(f"JSON:      {json_path} ({os.path.getsize(json_path)} bytes)")
@@ -183,7 +183,7 @@ def cmd_full(args):
         )
         ai_path = f"{base}-ai.md"
         docs = documenter.generate(scan_result, context=args.context)
-        with open(ai_path, "w") as f:
+        with open(ai_path, "w", encoding="utf-8") as f:
             f.write(docs)
         print(f"AI Docs:   {ai_path} ({len(docs)} bytes)")
 

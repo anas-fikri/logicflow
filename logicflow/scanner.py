@@ -9,8 +9,26 @@ import os
 import re
 import json
 import hashlib
+import bisect
 from pathlib import Path
 from fnmatch import fnmatch
+
+
+def _line_of(content, pos):
+    """Return 1-based line number for byte position `pos` in `content`.
+    O(log n) binary search over precomputed newline offsets — much faster than
+    content[:pos].count('\\n') + 1 which is O(n) per call."""
+    # Build newline index per unique content id (cheap cache — avoids rebuilding per match)
+    offsets = _line_of._cache.get(id(content))
+    if offsets is None:
+        offsets = [i for i, c in enumerate(content) if c == '\n']
+        _line_of._cache[id(content)] = offsets
+        _line_of._refs[id(content)] = content  # prevent GC from reusing the id
+    return bisect.bisect_left(offsets, pos) + 1
+
+
+_line_of._cache = {}
+_line_of._refs = {}
 
 
 # ─── Language registry ────────────────────────────────────────────────────────
@@ -211,6 +229,33 @@ FORM_PATTERNS = [
 ]
 
 
+# ─── Pre-compiled pattern tables (built once at import time) ─────────────────
+
+_JS_VALIDATORS_C = [(re.compile(p, re.IGNORECASE), t) for p, t in JS_VALIDATORS]
+_PY_VALIDATORS_C = [(re.compile(p, re.IGNORECASE), t) for p, t in PY_VALIDATORS]
+_PHP_VALIDATORS_C = [(re.compile(p, re.IGNORECASE), t) for p, t in PHP_VALIDATORS]
+
+_DB_PATTERNS_C = {
+    lang: {
+        "table_ref": [(re.compile(p, re.IGNORECASE), t) for p, t in rules["table_ref"]]
+    }
+    for lang, rules in DB_PATTERNS.items()
+}
+
+_ROUTE_PATTERNS_C = {
+    lang: [(re.compile(p, re.IGNORECASE), t) for p, t in patterns]
+    for lang, patterns in ROUTE_PATTERNS.items()
+}
+
+_FORM_PATTERNS_C = [(re.compile(p, re.IGNORECASE), t) for p, t in FORM_PATTERNS]
+
+_GO_ROUTE_C = re.compile(r"(?:HandleFunc|Handle)\s*\(\s*['\"]([^'\"]+)['\"]", re.IGNORECASE)
+_SERVICE_CALL_C = re.compile(
+    r"(?:fetch|axios|request|http|got|node-fetch)\s*\(.*?['\"]([^'\"]+)['\"]",
+    re.IGNORECASE
+)
+
+
 # ─── Scanner ─────────────────────────────────────────────────────────────────
 
 class CodeScanner:
@@ -366,16 +411,13 @@ class CodeScanner:
                     })
 
         # Validators
-        self._extract_validators(content, rel, lang, JS_VALIDATORS)
+        self._extract_validators(content, rel, lang, _JS_VALIDATORS_C)
 
         # Services/API calls
         self._extract_services(content, rel, lang)
 
         # Business logic functions
         self._extract_business_functions(content, rel, lang)
-
-        # Import analysis for relations
-        self._extract_imports(content, rel)
 
         # Framework specific scans
         self._scan_nextjs_app_router(content, rel)
@@ -455,7 +497,7 @@ class CodeScanner:
         self._scan_sqlalchemy(content, rel)
 
         # Validators
-        self._extract_validators(content, rel, "python", PY_VALIDATORS)
+        self._extract_validators(content, rel, "python", _PY_VALIDATORS_C)
 
     def _scan_php(self, content, rel):
         """Scan PHP: routes, DB, validation."""
@@ -524,8 +566,8 @@ class CodeScanner:
                     "type": "laravel",
                 })
 
-        for pattern, ptype in ROUTE_PATTERNS["php"]:
-            for match in re.finditer(pattern, content, re.IGNORECASE):
+        for pattern, ptype in _ROUTE_PATTERNS_C["php"]:
+            for match in pattern.finditer(content):
                 groups = match.groups()
                 if not groups:
                     continue
@@ -538,26 +580,26 @@ class CodeScanner:
                     self.result["endpoints"].append({
                         "id": self._node_id(),
                         "file": rel,
-                        "line": content[:match.start()].count("\n") + 1,
+                        "line": _line_of(content, match.start()),
                         "method": method if method else "ANY",
                         "path": path or method,
                         "type": ptype,
                     })
 
-        for pattern, ptype in DB_PATTERNS["php"]["table_ref"]:
-            for match in re.finditer(pattern, content, re.IGNORECASE):
+        for pattern, ptype in _DB_PATTERNS_C["php"]["table_ref"]:
+            for match in pattern.finditer(content):
                 table = next((g for g in match.groups() if g), "")
                 if table:
                     self.result["database"]["queries"].append({
                         "id": self._node_id(),
                         "file": rel,
-                        "line": content[:match.start()].count("\n") + 1,
+                        "line": _line_of(content, match.start()),
                         "table": table,
                         "operation": ptype,
                         "raw": match.group(0)[:100],
                     })
 
-        self._extract_validators(content, rel, "php", PHP_VALIDATORS)
+        self._extract_validators(content, rel, "php", _PHP_VALIDATORS_C)
         self._extract_business_functions(content, rel, "php")
 
         # Filter out seeders & migrations from form validations (to prevent dummy data noise)
@@ -569,7 +611,7 @@ class CodeScanner:
                     self.result["validations"].append({
                         "id": self._node_id(),
                         "file": rel,
-                        "line": content[:val_match.start()].count("\n") + 1,
+                        "line": _line_of(content, val_match.start()),
                         "field": field,
                         "rule": rule,
                         "kind": "laravel_validation",
@@ -586,26 +628,26 @@ class CodeScanner:
                         })
 
     def _scan_cs(self, content, rel):
-        for pattern, ptype in ROUTE_PATTERNS["csharp"]:
-            for match in re.finditer(pattern, content, re.IGNORECASE):
+        for pattern, ptype in _ROUTE_PATTERNS_C["csharp"]:
+            for match in pattern.finditer(content):
                 groups = match.groups()
                 method = (groups[0] or "").lower().replace("http", "")
                 path = groups[1] or ""
                 self.result["endpoints"].append({
                     "id": self._node_id(),
                     "file": rel,
-                    "line": content[:match.start()].count("\n") + 1,
+                    "line": _line_of(content, match.start()),
                     "method": method,
                     "path": path,
                     "type": ptype,
                 })
 
     def _scan_go(self, content, rel):
-        for match in re.finditer(r"(?:HandleFunc|Handle)\s*\(\s*['\"]([^'\"]+)['\"]", content):
+        for match in _GO_ROUTE_C.finditer(content):
             self.result["endpoints"].append({
                 "id": self._node_id(),
                 "file": rel,
-                "line": content[:match.start()].count("\n") + 1,
+                "line": _line_of(content, match.start()),
                 "method": "MIXED",
                 "path": match.group(1),
                 "type": "go",
@@ -669,8 +711,8 @@ class CodeScanner:
 
     def _extract_forms(self, content, rel, lang):
         """Extract forms/pages and form input fields from content."""
-        for pattern, ptype in FORM_PATTERNS:
-            for match in re.finditer(pattern, content, re.IGNORECASE):
+        for pattern, ptype in _FORM_PATTERNS_C:
+            for match in pattern.finditer(content):
                 groups = match.groups()
                 if not groups:
                     continue
@@ -678,7 +720,7 @@ class CodeScanner:
                     self.result["forms"].append({
                         "id": self._node_id(),
                         "file": rel,
-                        "line": content[:match.start()].count("\n") + 1,
+                        "line": _line_of(content, match.start()),
                         "action": groups[0],
                         "type": "html_form",
                     })
@@ -688,15 +730,15 @@ class CodeScanner:
                         self.result["forms"].append({
                             "id": self._node_id(),
                             "file": rel,
-                            "line": content[:match.start()].count("\n") + 1,
+                            "line": _line_of(content, match.start()),
                             "field": field,
                             "type": ptype,
                         })
 
     def _extract_validators(self, content, rel, lang, patterns):
-        """Extract validation rules from code."""
+        """Extract validation rules from code. `patterns` must be pre-compiled (pattern, vtype) tuples."""
         for pattern, vtype in patterns:
-            for match in re.finditer(pattern, content, re.IGNORECASE):
+            for match in pattern.finditer(content):
                 groups = match.groups()
                 field = ""
                 for g in groups:
@@ -706,7 +748,7 @@ class CodeScanner:
                 self.result["validations"].append({
                     "id": self._node_id(),
                     "file": rel,
-                    "line": content[:match.start()].count("\n") + 1,
+                    "line": _line_of(content, match.start()),
                     "rule": vtype,
                     "field": field,
                     "kind": lang,
@@ -715,14 +757,11 @@ class CodeScanner:
 
     def _extract_services(self, content, rel, lang):
         """Extract service/API calls."""
-        for match in re.finditer(
-            r"(?:fetch|axios|request|http|got|node-fetch)\s*\(.*?['\"]([^'\"]+)['\"]",
-            content, re.IGNORECASE
-        ):
+        for match in _SERVICE_CALL_C.finditer(content):
             self.result["services"].append({
                 "id": self._node_id(),
                 "file": rel,
-                "line": content[:match.start()].count("\n") + 1,
+                "line": _line_of(content, match.start()),
                 "url": match.group(1),
                 "type": "http_call",
             })
@@ -746,14 +785,6 @@ class CodeScanner:
                     "kind": lang,
                     "type": "function",
                 })
-
-    def _extract_imports(self, content, rel):
-        """Track imports for dependency graph."""
-        for match in re.finditer(
-            r"(?:import|require|require\s*\()\s*['\"]([^'\"]+)['\"]",
-            content
-        ):
-            pass  # Could be used for cross-file relations
 
     def _extract_py_ast(self, content, rel):
         """AST-based Python extraction for classes/functions."""
@@ -784,8 +815,8 @@ class CodeScanner:
                 })
 
     def _detect_auth(self, content, pos):
-        """Detect auth on endpoint."""
-        ctx = content[max(0, pos - 300):pos + 100]
+        """Detect auth on endpoint. Uses a narrow 100-char window to avoid false positives."""
+        ctx = content[max(0, pos - 100):pos + 80]
         if "auth" in ctx.lower() or "token" in ctx.lower() or "jwt" in ctx.lower():
             return "auth_required"
         return "public"

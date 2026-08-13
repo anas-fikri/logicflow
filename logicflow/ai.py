@@ -128,10 +128,18 @@ Fokus ke: bagaimana aplikasi ini bekerja, alur data, dan panduan developer baru.
             method="POST",
         )
 
-        with urllib.request.urlopen(req, timeout=300) as resp:
-            result = json.loads(resp.read().decode("utf-8"))
-            msg = result["choices"][0]["message"]
-            return msg.get("content") or msg.get("reasoning_content", "")
+        try:
+            with urllib.request.urlopen(req, timeout=300) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+                msg = result["choices"][0]["message"]
+                return msg.get("content") or msg.get("reasoning_content", "")
+        except urllib.error.HTTPError as e:
+            # Only log status code — NOT the full exception which may contain auth headers
+            raise RuntimeError(f"LLM API HTTP {e.code}: {e.reason}") from None
+        except urllib.error.URLError as e:
+            raise RuntimeError(f"LLM API connection error: {e.reason}") from None
+        except (KeyError, IndexError, json.JSONDecodeError) as e:
+            raise RuntimeError(f"LLM API response parse error: {type(e).__name__}") from None
 
     def _generate_fallback(self, scan_result, context):
         """Fallback when AI API unavailable — generate structured docs manually."""

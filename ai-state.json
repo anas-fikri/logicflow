@@ -1,63 +1,31 @@
 {
   "version": 1,
-  "last_session": "2026-08-13T12:55:00Z",
-  "context": "LogicFlow — Source Code Visualizer & Dual-Mode Diagram Generator (Ideal State). Business Flow (HTML card-based tree, label Bahasa Indonesia, Legend Glossary) + Developer Force-Directed Graph + Unified Multi-Project Dashboard. Resolved 4 critical/UX bugs found during comprehensive simulation (Title XSS escaping, viewport zoom preservation on expand/collapse, quote escaping in focusNode, unique key matching).",
+  "last_session": "2026-08-13",
+  "context": "LogicFlow CLI python tool for dynamic dual-mode diagram generation.",
   "modules": {
-    "scanner": {
-      "status": "active",
-      "file": "logicflow/scanner.py",
-      "languages": ["php", "javascript", "typescript", "vue", "svelte", "python", "go", "csharp", "java", "kotlin"],
-      "frameworks": ["laravel", "express", "vue_router", "react_router", "flask", "fastapi", "django", "aspnet", "springboot", "nestjs", "nextjs_app_router"],
-      "model_parsers": ["pydantic", "sqlalchemy"]
-    },
-    "diagram": {
-      "status": "active",
-      "file": "logicflow/diagram.py",
-      "modes": ["business", "developer"],
-      "d3": "inline v7 (279KB, no CDN)",
-      "features": ["legend-glossary", "sidebar-filter", "detail-panel", "mode-switch-topbar", "svg-export", "png-export", "http-method-filter-pills", "auto-scroll-center-zoom"]
-    },
-    "dashboard": {
-      "status": "active",
-      "file": "logicflow/dashboard.py",
-      "output": "~/.logicflow/dashboard.html",
-      "features": ["multi-project-grid", "search-filter", "glossary", "management-guide"]
-    },
-    "project": {
-      "status": "active",
-      "file": "logicflow/project.py",
-      "registry": "~/.logicflow/projects.json",
-      "projects_registered": 3,
-      "default_open_mode": "both"
-    },
-    "cli": {
-      "status": "active",
-      "entry": "logicflow/__main__.py",
-      "prog_name": "logicflow",
-      "version": "1.1.0"
-    }
+    "scanner": "AST code scanner with apiResource, controller linkage, seeder filtering, prerequisite tracking",
+    "diagram": "Dual-mode diagram builder with Business Stage Waterfall visualization and prerequisite warning panel"
   },
-  "bugs_found": [],
-  "progress": [
+  "bugs_found": [
     {
-      "date": "2026-08-10",
-      "item": "Initial scaffold: scanner + D3.js diagram, Project registry CLI"
+      "id": "BUG-006",
+      "severity": "HIGH",
+      "description": "Double icon rendering on Stage cards (e.g. 📋 🔑 0. Autentikasi)",
+      "status": "fixed",
+      "fix_commit": "3fed5d5"
     },
     {
-      "date": "2026-08-12",
-      "item": "Dual-mode diagram (business.html + developer.html), Unified Dashboard dashboard.html, badge colors, Indonesian labels"
-    },
-    {
-      "date": "2026-08-13",
-      "item": "Renamed to LogicFlow. Added Legend Glossary & dual-mode auto default."
-    },
-    {
-      "date": "2026-08-13",
-      "item": "Completed Bug Hunt Round 1 & Round 2 (16 test scenarios): Title XSS escaping, zoom/pan preservation, single quote JS attribute escaping, focusNodeByKey, Python route regex deduplication/method extraction, cmd_project_remove purge guard."
+      "id": "BUG-007",
+      "severity": "MEDIUM",
+      "description": "Singular parameter regex over-stripping 's' on words ending in 'ss' or 's'",
+      "status": "fixed",
+      "fix_commit": "3fed5d5"
     }
   ],
-  "next_tasks": [
-    "Lazy-render / web-worker for >5000 nodes",
-    "Git diff mode — highlight route changes between commits"
+  "progress": [
+    "Fixed double icon bug in buildCardHTML & renderSidebarTree",
+    "Fixed singular parameter regex for apiResource parameters",
+    "Rescanned all 3 projects: cert26 (87 APIs, 11 controllers), mailcow, passman",
+    "Pushed fixes to origin/main (commit 3fed5d5)"
   ]
 }
