@@ -485,13 +485,14 @@ class CodeScanner:
                 ctrl_name = ctrl_raw.split('\\')[-1].replace('::class', '').strip('\'" ')
                 full_base = f"{path_prefix}{res_name}".strip('/')
                 
+                singular = res_name[:-1] if res_name.endswith('s') and not res_name.endswith('ss') else res_name
                 # Standard 5 API Resource routes
                 resource_routes = [
                     ("get", full_base, "index"),
                     ("post", full_base, "store"),
-                    ("get", f"{full_base}/{{{res_name.rstrip('s')}}}", "show"),
-                    ("put", f"{full_base}/{{{res_name.rstrip('s')}}}", "update"),
-                    ("delete", f"{full_base}/{{{res_name.rstrip('s')}}}", "destroy"),
+                    ("get", f"{full_base}/{{{singular}}}", "show"),
+                    ("put", f"{full_base}/{{{singular}}}", "update"),
+                    ("delete", f"{full_base}/{{{singular}}}", "destroy"),
                 ]
                 for m, p, act in resource_routes:
                     self.result["endpoints"].append({

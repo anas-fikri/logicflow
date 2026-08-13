@@ -498,22 +498,37 @@ function renderTree() {
   renderSidebarTree();
 }
 
+function getNodeIconAndLabel(d) {
+  const type = d.data.type || 'feature';
+  let rawName = d.data.name || '—';
+  
+  // Extract leading emoji if present to avoid double icons
+  const emojiMatch = rawName.match(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])\s*/u);
+  if (emojiMatch) {
+    return { icon: emojiMatch[1], label: rawName.slice(emojiMatch[0].length) };
+  }
+  
+  let defaultIcon = '🔵';
+  if (type === 'root') defaultIcon = '🏠';
+  else if (type === 'menu') defaultIcon = '📋';
+  else if (type === 'validation') defaultIcon = '🟣';
+  else if (type === 'table') defaultIcon = '🟡';
+  
+  return { icon: defaultIcon, label: rawName };
+}
+
 function buildCardHTML(d, isSelected) {
   const type = d.data.type || 'feature';
-  const label = d.data.name || '—';
   const hasChildren = d._children || d.children;
   const isCollapsed = d._children && !d.children;
   const method = (d.data.method || '').toLowerCase();
 
-  let icon = '🔵';
-  if (type === 'root') icon = '🏠';
-  if (type === 'menu') icon = '📋';
-  if (type === 'validation') icon = '🟣';
-  if (type === 'table') icon = '🟡';
+  const { icon, label } = getNodeIconAndLabel(d);
 
   const selClass = isSelected ? ' selected' : '';
+  const stageClass = d.data.isStage ? ' stage' : '';
   const key = _nodeKey(d);
-  let html = `<div class="card ${type}${selClass}">`;
+  let html = `<div class="card ${type}${stageClass}${selClass}">`;
   html += `<span class="card-icon">${icon}</span>`;
   html += `<span class="card-label">${label}</span>`;
   if (method) html += `<span class="card-method ${method}">${method}</span>`;
@@ -726,8 +741,8 @@ function renderSidebarTree() {
     item.className = 'tree-item';
     item.dataset.key = _nodeKey(d);
     item.style.paddingLeft = (12 + d.depth * 12) + 'px';
-    const icon = d.data.type === 'root' ? '🏠' : d.data.type === 'menu' ? '📋' : '🔵';
-    item.innerHTML = `<span class="icon">${icon}</span><span class="label">${d.data.name}</span>`;
+    const { icon, label } = getNodeIconAndLabel(d);
+    item.innerHTML = `<span class="icon">${icon}</span><span class="label">${label}</span>`;
     item.onclick = () => {
       // expand parents
       let parent = d.parent;
