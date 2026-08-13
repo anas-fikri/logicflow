@@ -258,7 +258,8 @@ def cmd_project_remove(args):
     del reg["projects"][name]
     _save_registry(reg)
 
-    if args.purge:
+    purge = getattr(args, "purge", False)
+    if purge:
         d = _project_dir(name)
         if d.exists():
             import shutil

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_session": "2026-08-13T11:46:00Z",
-  "context": "LogicFlow — Source Code Visualizer & Dual-Mode Diagram Generator (Ideal State). Business Flow (HTML card-based tree, label Bahasa Indonesia, Legend Glossary) + Developer Force-Directed Graph + Unified Multi-Project Dashboard. Includes SVG/PNG export, HTTP method pills, node ID namespacing, multi-framework scanners, card selection highlight, ancestor flow link highlight, and smart controller validation matching.",
+  "last_session": "2026-08-13T12:55:00Z",
+  "context": "LogicFlow — Source Code Visualizer & Dual-Mode Diagram Generator (Ideal State). Business Flow (HTML card-based tree, label Bahasa Indonesia, Legend Glossary) + Developer Force-Directed Graph + Unified Multi-Project Dashboard. Resolved 4 critical/UX bugs found during comprehensive simulation (Title XSS escaping, viewport zoom preservation on expand/collapse, quote escaping in focusNode, unique key matching).",
   "modules": {
     "scanner": {
       "status": "active",
@@ -53,7 +53,7 @@
     },
     {
       "date": "2026-08-13",
-      "item": "Completed Ideal State: Node ID prefixing, Next.js App Router, NestJS Decorators, Spring Boot (Java/Kotlin), Pydantic & SQLAlchemy FK parsers, SVG/PNG diagram exports, HTTP Method filter pills, and auto-scroll center zoom."
+      "item": "Completed Bug Hunt Round 1 & Round 2 (16 test scenarios): Title XSS escaping, zoom/pan preservation, single quote JS attribute escaping, focusNodeByKey, Python route regex deduplication/method extraction, cmd_project_remove purge guard."
     }
   ],
   "next_tasks": [

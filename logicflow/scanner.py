@@ -169,11 +169,9 @@ ROUTE_PATTERNS = {
         (r"<Route\s+path=['\"]([^'\"]+)['\"]", "react_router"),
     ],
     "python": [
-        # Flask
-        (r"@(?:app|blueprint)\s*\.\s*(?:route|get|post|put|patch|delete)\s*\(\s*['\"]([^'\"]+)['\"]", "flask"),
-        (r"@(?:app|blueprint)\s*\.\s*route\s*\(\s*`(.*?)`", "flask_template"),
-        # FastAPI
-        (r"@(?:app|router)\s*\.\s*(?:get|post|put|patch|delete|head|options)\s*\(\s*['\"]([^'\"]+)['\"]", "fastapi"),
+        # Flask & FastAPI route decorators (captures HTTP method + path)
+        (r"@(?:app|router|blueprint)\s*\.\s*(get|post|put|patch|delete|head|options)\s*\(\s*['\"]([^'\"]+)['\"]", "decorator_method"),
+        (r"@(?:app|blueprint)\s*\.\s*route\s*\(\s*['\"]([^'\"]+)['\"](?:\s*,\s*methods\s*=\s*\[(.*?)\])?", "flask_route"),
         # Django
         (r"path\s*\(\s*['\"]([^'\"]+)['\"]", "django"),
         (r"re_path\s*\(\s*['\"]([^'\"]+)['\"]", "django_re"),
@@ -385,19 +383,54 @@ class CodeScanner:
     def _scan_py(self, content, rel):
         """Scan Python: routes, DB, validation, classes."""
         # Routes
+        seen_ep_keys = set()
         for pattern, ptype in ROUTE_PATTERNS["python"]:
             for match in re.finditer(pattern, content, re.IGNORECASE):
                 groups = match.groups()
-                path = next((g for g in groups if g), "")
-                if path:
-                    self.result["endpoints"].append({
-                        "id": self._node_id(),
-                        "file": rel,
-                        "line": content[:match.start()].count("\n") + 1,
-                        "method": ptype.upper() if hasattr(ptype, "upper") else "GET",
-                        "path": path,
-                        "type": ptype,
-                    })
+                line = content[:match.start()].count("\n") + 1
+                if ptype == "decorator_method" and len(groups) >= 2:
+                    method, path = groups[0].upper(), groups[1]
+                    key = (rel, line, path, method)
+                    if key not in seen_ep_keys:
+                        seen_ep_keys.add(key)
+                        self.result["endpoints"].append({
+                            "id": self._node_id(),
+                            "file": rel,
+                            "line": line,
+                            "method": method,
+                            "path": path,
+                            "type": "python",
+                        })
+                elif ptype == "flask_route" and groups:
+                    path = groups[0]
+                    raw_methods = groups[1] if len(groups) > 1 and groups[1] else "GET"
+                    methods = [m.strip(" '\"").upper() for m in raw_methods.split(",") if m.strip(" '\"")]
+                    for method in methods or ["GET"]:
+                        key = (rel, line, path, method)
+                        if key not in seen_ep_keys:
+                            seen_ep_keys.add(key)
+                            self.result["endpoints"].append({
+                                "id": self._node_id(),
+                                "file": rel,
+                                "line": line,
+                                "method": method,
+                                "path": path,
+                                "type": "flask",
+                            })
+                else:
+                    path = next((g for g in groups if g), "")
+                    if path:
+                        key = (rel, line, path, "GET")
+                        if key not in seen_ep_keys:
+                            seen_ep_keys.add(key)
+                            self.result["endpoints"].append({
+                                "id": self._node_id(),
+                                "file": rel,
+                                "line": line,
+                                "method": "GET",
+                                "path": path,
+                                "type": ptype,
+                            })
 
         # DB queries
         for pattern, ptype in DB_PATTERNS["python"]["table_ref"]:
