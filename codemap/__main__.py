@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from codemap.scanner import CodeScanner
 from codemap.ai import AIDocumenter
 from codemap.diagram import DiagramBuilder
+from codemap.project import setup_project_subparser
 
 VERSION = "1.0.0"
 
@@ -210,6 +211,9 @@ def main():
     sp.add_argument("-l", "--languages", nargs="*")
     sp.add_argument("-e", "--exclude", nargs="*", default=["node_modules", ".git", "vendor"])
     sp.set_defaults(func=cmd_full)
+    
+    # project management
+    setup_project_subparser(sub)
     
     args = p.parse_args()
     args.func(args)
