@@ -95,9 +95,9 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
 .lane-header { fill: #484f58; font-size: 11px; font-weight: 600; text-anchor: middle; text-transform: uppercase; letter-spacing: 1px; }
 
 /* Cards (foreignObject) */
-.card { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 6px; background: #161b22; border: 1px solid #30363d; border-left-width: 4px; font-size: 12px; cursor: pointer; white-space: nowrap; transition: all 0.15s; box-shadow: 0 2px 4px rgba(0,0,0,0.3); user-select: none; width: 100%; height: 100%; }
-.card:hover { background: #21262d; box-shadow: 0 4px 8px rgba(0,0,0,0.5); transform: translateY(-1px); }
-.card.selected { background: #1f6feb22; border-color: #58a6ff; box-shadow: 0 0 0 1px #58a6ff; }
+.card { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 6px; background: #161b22 !important; border: 1px solid #30363d; border-left-width: 4px; font-size: 12px; cursor: pointer; white-space: nowrap; transition: all 0.15s; box-shadow: 0 2px 4px rgba(0,0,0,0.4); user-select: none; width: 100%; height: 100%; box-sizing: border-box; position: relative; z-index: 2; }
+.card:hover { background: #21262d !important; box-shadow: 0 4px 8px rgba(0,0,0,0.6); transform: translateY(-1px); }
+.card.selected { background: #1f6feb22 !important; border-color: #58a6ff; box-shadow: 0 0 0 1px #58a6ff; }
 .card-icon { font-size: 13px; flex-shrink: 0; }
 .card-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .card-method { font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 600; flex-shrink: 0; text-transform: uppercase; }
@@ -115,7 +115,7 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
 .card.table { border-left-color: #d29922; }
 
 /* Legend */
-.legend { position: absolute; bottom: 12px; left: 12px; background: #161b22ee; border: 1px solid #30363d; border-radius: 8px; padding: 10px 14px; font-size: 11px; max-width: 300px; backdrop-filter: blur(4px); }
+.legend { position: absolute; bottom: 12px; left: 12px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 10px 14px; font-size: 11px; max-width: 310px; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
 .legend h5 { font-size: 10px; color: #8b949e; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
 .legend .row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
 .legend .bar { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
@@ -170,23 +170,29 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
         <div id="detail-body"></div>
       </div>
       <div id="legend" class="legend">
-        <h5>Komponen Diagram</h5>
-        <div class="row"><div class="bar" style="background:#3fb950"></div> <strong>Aplikasi</strong> — Proyek utama</div>
-        <div class="row"><div class="bar" style="background:#f778ba"></div> <strong>Menu</strong> — Kelompok modul bisnis</div>
-        <div class="row"><div class="bar" style="background:#58a6ff"></div> <strong>Fitur / Aksi</strong> — Halaman / aksi user</div>
-        <div class="row"><div class="bar" style="background:#8957e5"></div> <strong>Validasi</strong> — Rules input field</div>
-        <div class="row"><div class="bar" style="background:#d29922"></div> <strong>Database Table</strong> — Penyimpanan data</div>
-        <div class="sep"></div>
-        <h5>Legend Singkatan & Istilah (Glossary)</h5>
-        <div class="row"><strong>API</strong>: Application Programming Interface</div>
-        <div class="row"><strong>DB</strong>: Database (Basis Data & Tabel)</div>
-        <div class="row"><strong>UI</strong>: User Interface (Tampilan Pengguna)</div>
-        <div class="row"><strong>AST</strong>: Abstract Syntax Tree (Ekstraksi Kode)</div>
-        <div class="row"><strong>HTTP</strong>: GET (Lihat), POST (Tambah), PUT (Edit), DELETE (Hapus)</div>
-        <div class="sep"></div>
-        <h5>Panduan Navigasi</h5>
-        <div class="row">▸ Klik card = buka / tutup cabang</div>
-        <div class="row">▸ Scroll mouse = Zoom, Drag = Geser</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleLegend()">
+          <h5 style="margin:0;">LEGENDA & PANDUAN</h5>
+          <button id="legend-btn" style="background:#21262d;border:1px solid #30363d;color:#c9d1d9;font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;margin-left:8px;">[ − ] Sembunyikan</button>
+        </div>
+        <div id="legend-content" style="margin-top:8px;">
+          <div class="row"><div class="bar" style="background:#3fb950"></div> <strong>Aplikasi</strong> — Proyek utama</div>
+          <div class="row"><div class="bar" style="background:#f778ba"></div> <strong>Menu</strong> — Kelompok modul bisnis</div>
+          <div class="row"><div class="bar" style="background:#58a6ff"></div> <strong>Fitur / Aksi</strong> — Halaman / aksi user</div>
+          <div class="row"><div class="bar" style="background:#8957e5"></div> <strong>Validasi</strong> — Rules input field</div>
+          <div class="row"><div class="bar" style="background:#d29922"></div> <strong>Database Table</strong> — Penyimpanan data</div>
+          <div class="sep"></div>
+          <h5>Legend Singkatan & Istilah (Glossary)</h5>
+          <div class="row"><strong>API</strong>: Application Programming Interface</div>
+          <div class="row"><strong>DB</strong>: Database (Basis Data & Tabel)</div>
+          <div class="row"><strong>UI</strong>: User Interface (Tampilan Pengguna)</div>
+          <div class="row"><strong>AST</strong>: Abstract Syntax Tree (Ekstraksi Kode)</div>
+          <div class="row"><strong>HTTP</strong>: GET (Lihat), POST (Tambah), PUT (Edit), DELETE (Hapus)</div>
+          <div class="sep"></div>
+          <h5>Panduan Navigasi</h5>
+          <div class="row">▸ Klik kartu = Pilih & lihat detail field</div>
+          <div class="row">▸ Klik panah (▸/▾) = Buka / tutup cabang</div>
+          <div class="row">▸ Scroll mouse = Zoom, Drag = Geser canvas</div>
+        </div>
       </div>
     </div>
   </div>
@@ -376,15 +382,22 @@ function renderTree() {
   const nodes = treeRoot.descendants();
   const links = treeRoot.links();
 
+  // Node Cards geometry
+  const cardW = 190;
+  const cardH = 36;
+
+  // Custom link generator connecting right edge of parent to left edge of child
+  const customLink = d3.linkHorizontal()
+    .source(d => ({ x: d.source.x, y: d.source.y + cardW / 2 }))
+    .target(d => ({ x: d.target.x, y: d.target.y - cardW / 2 }))
+    .x(d => d.y)
+    .y(d => d.x);
+
   // Links
   root_g.selectAll('.tree-link')
     .data(links).enter().append('path')
     .attr('class', 'tree-link')
-    .attr('d', d3.linkHorizontal().x(d => d.y).y(d => d.x));
-
-  // Node Cards
-  const cardW = 190;
-  const cardH = 36;
+    .attr('d', customLink);
 
   // Build key→node map for expand toggle from inner HTML
   window._TREE_NODE_MAP = {};
@@ -398,6 +411,18 @@ function renderTree() {
       ev.stopPropagation();
       selectNode(d);
     });
+
+  // Opaque solid background rect behind foreignObject
+  nodeG.append('rect')
+    .attr('width', cardW)
+    .attr('height', cardH)
+    .attr('x', -cardW / 2)
+    .attr('y', -cardH / 2)
+    .attr('rx', 6)
+    .attr('ry', 6)
+    .attr('fill', '#161b22')
+    .attr('stroke', '#30363d')
+    .attr('stroke-width', 1);
 
   nodeG.append('foreignObject')
     .attr('width', cardW)
@@ -589,6 +614,19 @@ function selectNode(d) {
   }
 
   body.innerHTML = html;
+}
+
+function toggleLegend() {
+  const content = document.getElementById('legend-content');
+  const btn = document.getElementById('legend-btn');
+  if (!content || !btn) return;
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    btn.textContent = '[ − ] Sembunyikan';
+  } else {
+    content.style.display = 'none';
+    btn.textContent = '[ + ] Legenda';
+  }
 }
 
 function closeDetail() {
@@ -1070,6 +1108,19 @@ function selectDevNode(d) {
   body.innerHTML = html;
 }
 
+function toggleLegend() {
+  const content = document.getElementById('legend-content');
+  const btn = document.getElementById('legend-btn');
+  if (!content || !btn) return;
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    btn.textContent = '[ − ] Sembunyikan';
+  } else {
+    content.style.display = 'none';
+    btn.textContent = '[ + ] Legenda';
+  }
+}
+
 function closeDetail() {
   document.getElementById('detail').classList.remove('visible');
 }
@@ -1201,7 +1252,7 @@ class DiagramBuilder:
         """Build single mode HTML diagram."""
         d3_js = load_d3()
         scan_json = json.dumps(scan_result, ensure_ascii=False)
-        dash = dashboard_path or "../dashboard.html"
+        dash = dashboard_path or "../../dashboard.html"
 
         safe_title = html_lib.escape(title)
 

@@ -491,6 +491,19 @@ class CodeScanner:
         self._extract_validators(content, rel, "php", PHP_VALIDATORS)
         self._extract_business_functions(content, rel, "php")
 
+        # Laravel $request->validate / FormRequest rules array parsing
+        for val_match in re.finditer(r"['\"](\w+)['\"]\s*=>\s*['\"]([^'\"]+)['\"]", content):
+            field, rule = val_match.groups()
+            if any(kw in rule.lower() for kw in ["required", "nullable", "string", "min", "max", "email", "integer", "numeric", "boolean", "array", "date", "in:", "exists", "unique", "sometimes"]):
+                self.result["validations"].append({
+                    "id": self._node_id(),
+                    "file": rel,
+                    "line": content[:val_match.start()].count("\n") + 1,
+                    "field": field,
+                    "rule": rule,
+                    "kind": "laravel_validation",
+                })
+
     def _scan_cs(self, content, rel):
         for pattern, ptype in ROUTE_PATTERNS["csharp"]:
             for match in re.finditer(pattern, content, re.IGNORECASE):
@@ -574,10 +587,12 @@ class CodeScanner:
             })
 
     def _extract_forms(self, content, rel, lang):
-        """Extract forms/pages from content."""
+        """Extract forms/pages and form input fields from content."""
         for pattern, ptype in FORM_PATTERNS:
             for match in re.finditer(pattern, content, re.IGNORECASE):
                 groups = match.groups()
+                if not groups:
+                    continue
                 if ptype == "html_form":
                     self.result["forms"].append({
                         "id": self._node_id(),
@@ -586,15 +601,16 @@ class CodeScanner:
                         "action": groups[0],
                         "type": "html_form",
                     })
-                elif ptype == "input_field":
-                    self.result["validations"].append({
-                        "id": self._node_id(),
-                        "file": rel,
-                        "line": content[:match.start()].count("\n") + 1,
-                        "field": groups[0],
-                        "type": groups[1],
-                        "kind": "html_input",
-                    })
+                elif ptype in ("input_field", "textarea_field", "select_field", "vue_model", "react_state"):
+                    field = groups[0].replace("form.", "").replace("this.", "")
+                    if field:
+                        self.result["forms"].append({
+                            "id": self._node_id(),
+                            "file": rel,
+                            "line": content[:match.start()].count("\n") + 1,
+                            "field": field,
+                            "type": ptype,
+                        })
 
     def _extract_validators(self, content, rel, lang, patterns):
         """Extract validation rules from code."""

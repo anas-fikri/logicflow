@@ -8,7 +8,7 @@
 
 Setiap kali Anda menjalankan pemindaian (*scan*), LogicFlow secara otomatis memproduksi dua mode diagram:
 
-1. **💼 Mode Awam (Business Flow / `business.html`)**:
+1. **💼 Business Flow (`business.html`)**:
    - Diagram *horizontal tree* berbasis *card* yang intuitif dan mudah dipahami oleh pengguna non-teknis, Client, maupun BA (*Business Analyst*).
    - Pengelompokan berdasarkan menu utama aplikasi dengan label Bahasa Indonesia.
    - Detail aksi pengguna, aturan validasi form, dan keterhubungan tabel DB (*Database*).
