@@ -11,16 +11,16 @@ Modes:
 
 import argparse
 import json
-import sys
 import os
+import sys
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from logicflow.scanner import CodeScanner
 from logicflow.ai import AIDocumenter
 from logicflow.diagram import DiagramBuilder
 from logicflow.project import setup_project_subparser
+from logicflow.scanner import CodeScanner
 
 VERSION = "1.1.0"
 

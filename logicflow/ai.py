@@ -10,7 +10,6 @@ Uses LLM API to analyze scan results and produce:
 import json
 import os
 import sys
-from pathlib import Path
 
 
 class AIDocumenter:
@@ -51,8 +50,11 @@ Sections to produce:
 
         try:
             return self._call_llm(prompt)
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError) as e:
             print(f"AI generation failed: {e}", file=sys.stderr)
+            return self._generate_fallback(scan_result, context)
+        except Exception as e:  # noqa: BLE001
+            print(f"AI generation failed (unexpected): {e}", file=sys.stderr)
             return self._generate_fallback(scan_result, context)
 
     def _build_prompt(self, scan_result, context):
@@ -104,8 +106,8 @@ Fokus ke: bagaimana aplikasi ini bekerja, alur data, dan panduan developer baru.
 
     def _call_llm(self, prompt):
         """Call LLM API."""
-        import urllib.request
         import urllib.error
+        import urllib.request
 
         payload = {
             "model": self.model,
@@ -148,11 +150,11 @@ Fokus ke: bagaimana aplikasi ini bekerja, alur data, dan panduan developer baru.
         tables = scan_result.get("database", {}).get("tables", {})
         validations = scan_result.get("validations", [])
         business = scan_result.get("business_logic", [])
-        forms = scan_result.get("forms", [])
+        scan_result.get("forms", [])
 
         lines = []
         lines.append(f"# CodeMap AI Documentation — {scan_result.get('meta', {}).get('root', 'Project')}\n")
-        lines.append(f"*Dihasilkan dari scan otomatis. Untuk AI-enhanced docs, setup AI_API_URL + AI_API_KEY.*\n")
+        lines.append("*Dihasilkan dari scan otomatis. Untuk AI-enhanced docs, setup AI_API_URL + AI_API_KEY.*\n")
 
         # 1. Executive Summary
         lines.append("## 1. Ringkasan Eksekutif\n")
@@ -177,7 +179,7 @@ Fokus ke: bagaimana aplikasi ini bekerja, alur data, dan panduan developer baru.
         if services:
             for svc in services[:6]:
                 eps = grouped[svc]
-                methods = list(set(e.get("method","?") for e in eps))
+                methods = list({e.get("method","?") for e in eps})
                 lines.append(f"│  [{','.join(methods)}] {svc:<40} │")
         lines.append("└─────────────────────────────────────────────┘\n")
 
@@ -241,7 +243,7 @@ Fokus ke: bagaimana aplikasi ini bekerja, alur data, dan panduan developer baru.
         lines.append("## 7. Panduan Onboarding Developer Baru\n")
         lines.append("### Struktur Direktori\n")
         if endpoints:
-            files_with_eps = sorted(set(ep["file"] for ep in endpoints[:50]))
+            files_with_eps = sorted({ep["file"] for ep in endpoints[:50]})
             lines.append("File utama dengan endpoint:")
             for f in files_with_eps[:10]:
                 lines.append(f"- `{f}`")

@@ -5,8 +5,8 @@ Modes:
   developer  Dev mode: force-directed graph with full technical detail (routes, DB, validations, functions)
 """
 
-import json
 import html as html_lib
+import json
 from pathlib import Path
 
 D3_PATH = Path(__file__).parent.parent / "vendor" / "d3.v7.min.js"
@@ -1372,12 +1372,12 @@ class DiagramBuilder:
 
     @staticmethod
     def _safe_scan_json(scan_result):
-        """Serialize scan data to JSON safe for embedding in <script> blocks.
+        r"""Serialize scan data to JSON safe for embedding in <script> blocks.
         Replaces '</script>' with '<\/script>' to prevent HTML injection
         (VULN-01: scan data from scanned project could contain '</script>' strings)."""
         raw = json.dumps(scan_result, ensure_ascii=False)
         # Prevent premature </script> tag closure inside embedded JSON
-        return raw.replace("</script>", "<\/script>").replace("</Script>", "<\/Script>")
+        return raw.replace("</script>", r"<\/script>").replace("</Script>", r"<\/Script>")
 
     def build(self, scan_result, title="LogicFlow", mode="business", dev_file=None, biz_file=None, dashboard_path=None, _scan_json=None):
         """Build single mode HTML diagram."""

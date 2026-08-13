@@ -18,11 +18,11 @@ Usage:
 
 import json
 import os
-import sys
 import subprocess
-from pathlib import Path
-from datetime import datetime
+import sys
 import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
 
 REGISTRY_DIR = Path.home() / ".logicflow"
 REGISTRY_FILE = REGISTRY_DIR / "projects.json"
@@ -98,7 +98,7 @@ def cmd_project_add(args):
         "developer_diagram": None,
         "last_scan": None,
         "stats": None,
-        "created": datetime.now().isoformat(),
+        "created": datetime.now(tz=timezone.utc).isoformat(),
         "exclude": args.exclude or ["node_modules", ".git", "vendor", "dist"],
     }
     _save_registry(reg)
@@ -126,7 +126,7 @@ def cmd_project_list(args):
         menus = stats.get("menus", "—")
         apis = stats.get("apis", "—")
         nodes = stats.get("nodes", "—")
-        print(f"{name:<18} {p.get('title','—'):<22} {str(menus):>5} {str(apis):>5} {str(nodes):>6} {last:<19}")
+        print(f"{name:<18} {p.get('title','—'):<22} {menus!s:>5} {apis!s:>5} {nodes!s:>6} {last:<19}")
 
 
 def cmd_project_scan(args):
@@ -146,8 +146,8 @@ def cmd_project_scan(args):
     dev_file = str(d / "developer.html")
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from logicflow.scanner import CodeScanner
     from logicflow.diagram import DiagramBuilder
+    from logicflow.scanner import CodeScanner
 
     print(f"Scanning {source} ...")
     scanner = CodeScanner(root=source, exclude=exclude, project_name=name)
@@ -181,7 +181,7 @@ def cmd_project_scan(args):
     reg["projects"][name]["scan_file"] = scan_file
     reg["projects"][name]["business_diagram"] = biz_file
     reg["projects"][name]["developer_diagram"] = dev_file
-    reg["projects"][name]["last_scan"] = datetime.now().isoformat()
+    reg["projects"][name]["last_scan"] = datetime.now(tz=timezone.utc).isoformat()
     reg["projects"][name]["stats"] = {
         "endpoints": len(eps),
         "menus": len(menus),
@@ -189,7 +189,7 @@ def cmd_project_scan(args):
         "nodes": len(eps) + len(result.get("business_logic", [])) + len(result.get("validations", [])) + 1,
         "validations": len(result.get("validations", [])),
         "bizlogic": len(result.get("business_logic", [])),
-        "languages": list(set(ep.get("language", "") for ep in eps)) if eps else [],
+        "languages": list({ep.get("language", "") for ep in eps}) if eps else [],
     }
     _save_registry(reg)
 
@@ -232,7 +232,7 @@ def cmd_project_diagram(args):
     reg["projects"][name]["business_diagram"] = biz_file
     reg["projects"][name]["developer_diagram"] = dev_file
     _save_registry(reg)
-    print(f"Diagrams regenerated:")
+    print("Diagrams regenerated:")
     print(f"  Business:  {biz_file}")
     print(f"  Developer: {dev_file}")
 
@@ -278,7 +278,7 @@ def cmd_project_remove(args):
             if not str(resolved).startswith(str(OUTPUT_DIR.resolve())):
                 print(f"Error: refusing to delete '{d}' — outside output directory.")
                 sys.exit(1)
-        except Exception as e:
+        except (OSError, ValueError) as e:
             print(f"Error resolving path: {e}")
             sys.exit(1)
         if d.exists():
@@ -365,8 +365,10 @@ def cmd_project_scan_all(args):
             dummy.name = name
             cmd_project_scan(dummy)
             success += 1
-        except Exception as e:
+        except (OSError, RuntimeError, SystemExit) as e:
             print(f"  ERROR: {e}")
+        except Exception as e:  # noqa: BLE001
+            print(f"  ERROR (unexpected): {e}")
 
     print(f"\nDone: {success}/{total} projects scanned successfully.")
 

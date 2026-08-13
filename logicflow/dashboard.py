@@ -4,8 +4,6 @@ Generates a unified dashboard.html showing all registered projects,
 their stats, and links to open Business Flow or Developer Graph.
 """
 
-import json
-from pathlib import Path
 import html as html_lib
 
 DASHBOARD_TEMPLATE = r"""<!DOCTYPE html>
