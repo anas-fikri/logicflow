@@ -1,31 +1,59 @@
 {
   "version": 1,
-  "last_session": "2026-08-13T02:46:00Z",
-  "context": "LogicFlow — Source Code Scanner & Dual-Mode Diagram Builder (Mode Awam Business Flow & Mode Developer Force Graph + Unified Project Dashboard).",
+  "last_session": "2026-08-13T10:48:00Z",
+  "context": "LogicFlow — Source Code Scanner & Dual-Mode Diagram Builder. Business Flow (HTML card-based tree, label Bahasa Indonesia, Legend Glossary) + Developer Force-Directed Graph + Unified Multi-Project Dashboard. Renamed from CodeMap. CLI: `logicflow`. Registry: ~/.logicflow/.",
   "modules": {
     "scanner": {
       "status": "active",
+      "file": "logicflow/scanner.py",
       "languages": ["php", "javascript", "typescript", "vue", "svelte", "python", "go", "csharp"]
     },
     "diagram": {
       "status": "active",
+      "file": "logicflow/diagram.py",
       "modes": ["business", "developer"],
-      "d3": "inline v7 (279KB)"
+      "d3": "inline v7 (279KB, no CDN)",
+      "features": ["legend-glossary", "sidebar-filter", "detail-panel", "mode-switch-topbar"]
     },
     "dashboard": {
       "status": "active",
-      "output": "~/.logicflow/dashboard.html"
+      "file": "logicflow/dashboard.py",
+      "output": "~/.logicflow/dashboard.html",
+      "features": ["multi-project-grid", "search-filter", "glossary", "management-guide"]
     },
     "project": {
       "status": "active",
+      "file": "logicflow/project.py",
       "registry": "~/.logicflow/projects.json",
-      "projects_registered": 3
+      "projects_registered": 3,
+      "default_open_mode": "both"
+    },
+    "cli": {
+      "status": "active",
+      "entry": "logicflow/__main__.py",
+      "prog_name": "logicflow",
+      "version": "1.1.0"
     }
   },
+  "bugs_found": [],
   "progress": [
     {
+      "date": "2026-08-10",
+      "item": "Initial scaffold: scanner + D3.js diagram, Project registry CLI"
+    },
+    {
+      "date": "2026-08-12",
+      "item": "Dual-mode diagram (business.html + developer.html), Unified Dashboard dashboard.html, badge colors, Indonesian labels"
+    },
+    {
       "date": "2026-08-13",
-      "item": "Cleaned up root junk files, implemented Dual-Mode Diagram Generator (business.html & developer.html), built Unified Project Dashboard, updated CLI and project registry."
+      "item": "Added Legend Glossary to all HTML outputs. Renamed app CodeMap -> LogicFlow (package dir, CLI, registry, branding). Updated all docs/ai/*.md to remove stale CodeMap references and reflect dual-mode architecture."
     }
+  ],
+  "next_tasks": [
+    "Push to remote: git@github.com:anas-fikri/logicflow.git",
+    "Node ID prefix for cross-app merged diagrams",
+    "Scanner: Next.js App Router support",
+    "Lazy-render / web-worker for >5000 nodes"
   ]
 }

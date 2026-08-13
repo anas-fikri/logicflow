@@ -12,13 +12,12 @@ LogicFlow mengikuti pipeline `scan → diagram` (non-AI) atau `scan → ai → d
 
 ### Diagram Phase
 1. Load scan JSON
-2. Build 4 views:
-   - **Business Flow** (default) — horizontal tree, kiri→kanan: App → Menu → Aksi/API → Validasi & DB. Card-based expand/collapse. Label bahasa Indonesia.
-   - **Code Flow** — force-directed graph (D3), semua node + edge. Interaktif: click highlight, detail panel.
-   - **Database** — table relations (ERD-style).
-   - **Validasi** — list all validation rules, grouped by field.
-3. D3.js v7 di-inline di HTML output (279KB bundle).
-4. Output: standalone HTML file (buka di browser, no server needed).
+2. **Otomatis** menghasilkan **2 file HTML** sekaligus:
+   - `business.html` — **Business Flow**: horizontal tree kiri→kanan: App → Menu → Aksi/API → Validasi & DB. Card-based expand/collapse. Label Bahasa Indonesia. Legend Singkatan & Istilah.
+   - `developer.html` — **Developer Graph**: D3.js (*Data-Driven Documents*) force-directed graph, semua node + edge. Interaktif: klik highlight, detail panel. Legend Tipe Node & Singkatan.
+3. D3.js v7 di-inline di setiap HTML output (279 KB bundle, offline-ready, tanpa CDN).
+4. Setiap file HTML self-contained — buka langsung di browser, tanpa server.
+5. Topbar mode-switch di setiap diagram menghubungkan ke counterpart + Dashboard.
 
 ### AI Phase (optional)
 1. Load scan JSON
@@ -38,12 +37,16 @@ LogicFlow mengikuti pipeline `scan → diagram` (non-AI) atau `scan → ai → d
 |------|-------|
 | Project registry | `~/.logicflow/projects.json` |
 | Per-project scan data | `~/.logicflow/output/<name>/scan.json` |
-| Per-project diagram | `~/.logicflow/output/<name>/diagram.html` |
-| Scanner patterns | `codemap/scanner.py` → `ROUTE_PATTERNS` dict |
-| Diagram templates | `codemap/diagram.py` → `build()` method |
-| Human labels mapping | `codemap/diagram.py` → `HUMAN_LABELS` dict |
-| AI prompt template | `codemap/ai.py` → `generate()` method |
-| D3 source | `vendor/d3.v7.min.js` (inline di HTML) |
+| Business Flow diagram | `~/.logicflow/output/<name>/business.html` |
+| Developer Graph diagram | `~/.logicflow/output/<name>/developer.html` |
+| Unified Dashboard | `~/.logicflow/dashboard.html` |
+| Scanner patterns | `logicflow/scanner.py` → `ROUTE_PATTERNS` dict |
+| Business diagram template | `logicflow/diagram.py` → `BusinessDiagramBuilder` |
+| Developer diagram template | `logicflow/diagram.py` → `DevDiagramBuilder` |
+| Human labels mapping | `logicflow/diagram.py` → `HUMAN_LABELS` dict |
+| Dashboard template | `logicflow/dashboard.py` → `DashboardBuilder` |
+| AI prompt template | `logicflow/ai.py` → `generate()` method |
+| D3.js source | `vendor/d3.v7.min.js` (inline di HTML output) |
 
 ## Roles
 

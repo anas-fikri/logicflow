@@ -10,10 +10,10 @@ Successfully refactored LogicFlow workspace to professional standards:
 4. Updated all `docs/ai/*.md` files, `README.md`, `ai-state.json`, and committed changes to git (`ca277ad`).
 
 ### Key Artifacts
-- `codemap/diagram.py` — `BusinessDiagramBuilder` & `DevDiagramBuilder`
-- `codemap/dashboard.py` — `DashboardBuilder`
-- `codemap/project.py` — Project registry CLI manager
-- `codemap/__main__.py` — Main CLI entry point
+- `logicflow/diagram.py` — `BusinessDiagramBuilder` & `DevDiagramBuilder`
+- `logicflow/dashboard.py` — `DashboardBuilder`
+- `logicflow/project.py` — Project registry CLI manager
+- `logicflow/__main__.py` — Main CLI entry point
 
 ### Next Task Options
 - Add Next.js scanner rules to `scanner.py`
