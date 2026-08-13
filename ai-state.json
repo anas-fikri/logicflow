@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "last_session": "2026-08-13T08:30:00Z",
+  "context": "CodeMap — AI-assisted source code scanner & interactive diagram builder. Multi-framework (Laravel, Vue3, Express, Flask, FastAPI). Project registry CLI. D3 inline.",
+  "modules": {
+    "scanner": {
+      "status": "active",
+      "lines": 739,
+      "languages": ["php", "javascript", "typescript", "vue", "svelte", "python", "go", "csharp"],
+      "frameworks": ["laravel", "express", "vue-router", "flask", "fastapi", "gin", "aspnet"]
+    },
+    "diagram": {
+      "status": "active",
+      "lines": 1247,
+      "views": ["business", "code-flow", "database", "validation"],
+      "layout": "horizontal-tree + force-directed",
+      "d3": "inline v7 (279KB)"
+    },
+    "ai": {
+      "status": "active",
+      "lines": 253,
+      "api": "9Router/OmniRoute",
+      "stream": false
+    },
+    "project": {
+      "status": "active",
+      "lines": 350,
+      "registry": "~/.codemap/projects.json",
+      "projects_registered": 3
+    }
+  },
+  "bugs_found": [
+    {
+      "bug": "Vue Router routes not detected (0 endpoints)",
+      "status": "fixed",
+      "fix": "Added Vue Router pattern + .vue/.svelte dispatch + single-group support",
+      "commit": "f82d919"
+    },
+    {
+      "bug": "Catchall* label showing raw wildcard",
+      "status": "fixed",
+      "fix": "menuName() strip :pathMatch(.*)*, trailing *, leading :",
+      "commit": "f82d919"
+    },
+    {
+      "bug": "Regex error: missing / in :pathMatch pattern",
+      "status": "fixed",
+      "fix": "Escaped regex properly: /:pathMatch\\([^)]+\\)/",
+      "commit": "f82d919"
+    },
+    {
+      "bug": "Passman AI timeout on 1463 validation entries",
+      "status": "open",
+      "fix": "Split into smaller batches (10 per batch instead of 50)"
+    },
+    {
+      "bug": "Cross-app node ID collision in merged-pcp.json",
+      "status": "open",
+      "fix": "Add repo prefix to node IDs"
+    }
+  ],
+  "progress": [
+    {
+      "date": "2026-08-10",
+      "item": "Initial scanner + diagram builder (v1)"
+    },
+    {
+      "date": "2026-08-11",
+      "item": "D3 inline bundle, force-directed layout"
+    },
+    {
+      "date": "2026-08-12",
+      "item": "Business Flow horizontal tree (v3), card-based, Indonesian labels"
+    },
+    {
+      "date": "2026-08-13",
+      "item": "Vue Router support, label sanitization, project manager CLI (v4)"
+    },
+    {
+      "date": "2026-08-13",
+      "item": "ai-toolkit documentation setup (docs/ai/*.md filled)"
+    }
+  ]
+}
