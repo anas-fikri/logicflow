@@ -134,14 +134,14 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
       <button onclick="exportPNG()" class="mode-btn inactive" title="Export PNG image">📸 PNG</button>
       <span class="mode-btn active">💼 Alur Bisnis</span>
       <a href="__DEV_FILE__" class="mode-btn inactive">⚡ Developer Graph</a>
-      <a href="dashboard.html" class="dash-btn">🏠 Dashboard</a>
+      <button onclick="window.location.href='__DASHBOARD_PATH__'" class="dash-btn">🏠 Dashboard</button>
     </div>
   </div>
 
   <div id="main">
     <div id="sidebar">
       <div id="sidebar-header">
-        <h3>Menu Aplikasi</h3>
+        <h3 id="sidebar-proj-title">Menu Aplikasi</h3>
         <div id="filter-box">
           <input type="text" id="search" placeholder="Cari menu atau fitur..." oninput="filterTree(this.value)">
           <div class="method-pills" style="display:flex;gap:4px;margin-top:6px;">
@@ -265,6 +265,11 @@ function menuName(path) {
 let treeRoot = null;
 let zoomBehavior = null;
 let selectedNode = null;
+let selectedNodeKey = null;  // stable key for re-highlight after renderTree
+
+function _nodeKey(d) {
+  return d && d.data ? (d.depth + ':' + d.data.name + ':' + (d.data.path||'')) : null;
+}
 
 function buildTree() {
   const appTitle = document.title.split(' — ')[0] || 'App';
@@ -284,7 +289,9 @@ function buildTree() {
       method: ep.method,
       path: ep.path,
       file: ep.file,
+      line: ep.line,
       auth: ep.auth,
+      menuKey: mname,
       children: [],
     };
 
@@ -396,7 +403,13 @@ function renderTree() {
     .attr('height', cardH)
     .attr('x', -cardW / 2)
     .attr('y', -cardH / 2)
-    .html(d => buildCardHTML(d));
+    .html(d => buildCardHTML(d, _nodeKey(d) === selectedNodeKey));
+
+  // Re-highlight selected links
+  _applyLinkHighlight();
+
+  // Re-highlight selected sidebar item
+  _applySidebarHighlight();
 
   // Center initial view
   const initScale = 0.85;
@@ -412,7 +425,7 @@ function renderTree() {
   renderSidebarTree();
 }
 
-function buildCardHTML(d) {
+function buildCardHTML(d, isSelected) {
   const type = d.data.type || 'feature';
   const label = d.data.name || '—';
   const hasChildren = d._children || d.children;
@@ -425,7 +438,8 @@ function buildCardHTML(d) {
   if (type === 'validation') icon = '🟣';
   if (type === 'table') icon = '🟡';
 
-  let html = `<div class="card ${type}">`;
+  const selClass = isSelected ? ' selected' : '';
+  let html = `<div class="card ${type}${selClass}">`;
   html += `<span class="card-icon">${icon}</span>`;
   html += `<span class="card-label">${label}</span>`;
   if (method) html += `<span class="card-method ${method}">${method}</span>`;
@@ -438,9 +452,35 @@ function buildCardHTML(d) {
   return html;
 }
 
+function _applyLinkHighlight() {
+  d3.selectAll('.tree-link').classed('highlighted', false);
+  if (!selectedNode) return;
+  const ancestorSet = new Set(selectedNode.ancestors());
+  d3.selectAll('.tree-link').classed('highlighted', link => {
+    return ancestorSet.has(link.source) && ancestorSet.has(link.target);
+  });
+}
+
+function _applySidebarHighlight() {
+  document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('selected'));
+  if (!selectedNodeKey) return;
+  document.querySelectorAll('.tree-item').forEach(el => {
+    if (el.dataset.key === selectedNodeKey) el.classList.add('selected');
+  });
+}
+
 function selectNode(d) {
   selectedNode = d;
-  d3.selectAll('.card').classed('selected', false);
+  selectedNodeKey = _nodeKey(d);
+
+  // Update card UI highlights
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+  d3.selectAll('.tree-node').filter(n => _nodeKey(n) === selectedNodeKey)
+    .select('.card').classed('selected', true);
+
+  _applyLinkHighlight();
+  _applySidebarHighlight();
+
   const data = d.data;
 
   // Show panel
@@ -468,37 +508,41 @@ function selectNode(d) {
     });
     html += '</div>';
   }
-  if (data.type === 'validation') {
-    html += `<div class="section"><h4>Rule Detail</h4><div class="row">Field: <code>${data.field || '—'}</code></div><div class="row">Rule: <code>${data.rule || '—'}</code></div></div>`;
-  }
-  if (data.type === 'table' && data.columns) {
-    html += `<div class="section"><h4>Kolom Table (${data.columns.length})</h4>`;
-    data.columns.forEach(col => {
-      html += `<div class="row"><code>${col.name}</code> <span style="color:#8b949e">(${col.type})</span></div>`;
-    });
-    html += '</div>';
-  }
 
-  // ── Field & Validasi Input ──
-  const relatedValidations = (SCAN.validations || []).filter(v =>
-    (data.file && v.file === data.file) ||
-    (d.children || d._children || []).some(c => c.data.field && c.data.field === v.field)
-  );
-  const relatedForms = (SCAN.forms || []).filter(f => data.file && f.file === data.file);
+  // ── Smart Validation & Field Matching ──
+  const fileKey = data.file ? data.file.toLowerCase() : '';
+  const menuKey = (data.menuKey || menuName(data.path || '')).toLowerCase();
+  const pathSegs = (data.path || '').split('/').filter(p => p && !/^(api|v\d+|\{\w+\})$/i.test(p)).map(p => p.toLowerCase());
 
-  // Build merged field list: validations + forms
+  const relatedValidations = (SCAN.validations || []).filter(v => {
+    if (!v.file) return false;
+    const vf = v.file.toLowerCase();
+    if (fileKey && vf === fileKey) return true;
+    if (menuKey && menuKey !== 'root' && menuKey !== 'catchall' && vf.includes(menuKey)) return true;
+    if (pathSegs.some(seg => seg.length > 3 && vf.includes(seg))) return true;
+    return false;
+  });
+
+  const relatedForms = (SCAN.forms || []).filter(f => {
+    if (!f.file) return false;
+    const ff = f.file.toLowerCase();
+    if (fileKey && ff === fileKey) return true;
+    if (menuKey && menuKey !== 'root' && ff.includes(menuKey)) return true;
+    return false;
+  });
+
+  // Build merged field list
   const fieldMap = {};
   relatedValidations.forEach(v => {
     const key = v.field || v.rule || '?';
     if (!fieldMap[key]) fieldMap[key] = { field: key, rules: [], sources: [] };
-    fieldMap[key].rules.push(v.rule || '');
+    if (v.rule && !fieldMap[key].rules.includes(v.rule)) fieldMap[key].rules.push(v.rule);
     fieldMap[key].sources.push('validation');
   });
   relatedForms.forEach(f => {
     const key = f.field || f.name || '?';
     if (!fieldMap[key]) fieldMap[key] = { field: key, rules: [], sources: [] };
     if (!fieldMap[key].sources.includes('form')) fieldMap[key].sources.push('form');
-    if (f.type) fieldMap[key].formType = f.type;
   });
 
   const fieldEntries = Object.values(fieldMap);
@@ -539,10 +583,15 @@ function renderSidebarTree() {
   const treeEl = document.getElementById('node-tree');
   treeEl.innerHTML = '';
 
+  const projTitle = (SCAN.meta && SCAN.meta.project_name) ? SCAN.meta.project_name : 'Menu Aplikasi';
+  const headerEl = document.getElementById('sidebar-proj-title');
+  if (headerEl) headerEl.textContent = '📁 ' + projTitle;
+
   const nodes = treeRoot ? treeRoot.descendants() : [];
   nodes.forEach(d => {
     const item = document.createElement('div');
     item.className = 'tree-item';
+    item.dataset.key = _nodeKey(d);
     item.style.paddingLeft = (12 + d.depth * 12) + 'px';
     const icon = d.data.type === 'root' ? '🏠' : d.data.type === 'menu' ? '📋' : '🔵';
     item.innerHTML = `<span class="icon">${icon}</span><span class="label">${d.data.name}</span>`;
@@ -761,7 +810,7 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
       <button onclick="exportPNG()" class="mode-btn inactive" title="Export PNG image">📸 PNG</button>
       <a href="__BIZ_FILE__" class="mode-btn inactive">💼 Alur Bisnis</a>
       <span class="mode-btn active">⚡ Developer Graph</span>
-      <a href="dashboard.html" class="dash-btn">🏠 Dashboard</a>
+      <button onclick="window.location.href='__DASHBOARD_PATH__'" class="dash-btn">🏠 Dashboard</button>
     </div>
   </div>
 
@@ -1133,26 +1182,29 @@ renderGraph();
 class DiagramBuilder:
     """Build interactive HTML diagram (business or developer mode)."""
 
-    def build(self, scan_result, title="LogicFlow", mode="business", dev_file=None, biz_file=None):
+    def build(self, scan_result, title="LogicFlow", mode="business", dev_file=None, biz_file=None, dashboard_path=None):
         """Build single mode HTML diagram."""
         d3_js = load_d3()
         scan_json = json.dumps(scan_result, ensure_ascii=False)
+        dash = dashboard_path or "../dashboard.html"
 
         if mode == "developer":
             html = DEV_TEMPLATE.replace("__D3_JS__", d3_js)
             html = html.replace("__SCAN_DATA__", scan_json)
             html = html.replace("__TITLE__", title)
             html = html.replace("__BIZ_FILE__", biz_file or "business.html")
+            html = html.replace("__DASHBOARD_PATH__", dash)
             return html
         else:
             html = BUSINESS_TEMPLATE.replace("__D3_JS__", d3_js)
             html = html.replace("__SCAN_DATA__", scan_json)
             html = html.replace("__TITLE__", title)
             html = html.replace("__DEV_FILE__", dev_file or "developer.html")
+            html = html.replace("__DASHBOARD_PATH__", dash)
             return html
 
-    def build_both(self, scan_result, title="LogicFlow"):
+    def build_both(self, scan_result, title="LogicFlow", dashboard_path=None):
         """Build dual mode: returns (business_html, developer_html)."""
-        biz = self.build(scan_result, title=title, mode="business", dev_file="developer.html", biz_file="business.html")
-        dev = self.build(scan_result, title=title, mode="developer", dev_file="developer.html", biz_file="business.html")
+        biz = self.build(scan_result, title=title, mode="business", dev_file="developer.html", biz_file="business.html", dashboard_path=dashboard_path)
+        dev = self.build(scan_result, title=title, mode="developer", dev_file="developer.html", biz_file="business.html", dashboard_path=dashboard_path)
         return biz, dev
