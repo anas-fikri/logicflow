@@ -139,7 +139,7 @@ def cmd_project_scan(args):
     from logicflow.diagram import DiagramBuilder
 
     print(f"Scanning {source} ...")
-    scanner = CodeScanner(root=source, exclude=exclude)
+    scanner = CodeScanner(root=source, exclude=exclude, project_name=name)
     result = scanner.scan()
 
     with open(scan_file, "w") as f:

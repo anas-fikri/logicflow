@@ -26,10 +26,12 @@ VERSION = "1.1.0"
 
 def cmd_scan(args):
     """Non-AI mode: extract structured data from source code."""
+    proj_name = Path(args.source).resolve().name
     scanner = CodeScanner(
         root=args.source,
         languages=args.languages,
         exclude=args.exclude,
+        project_name=proj_name,
     )
     result = scanner.scan()
 
@@ -93,20 +95,24 @@ def cmd_diagram(args):
         if not args.source:
             print("Error: source directory required with --scan")
             sys.exit(1)
+        proj_name = args.title or Path(args.source).resolve().name
         scanner = CodeScanner(
             root=args.source,
             languages=args.languages,
             exclude=args.exclude,
+            project_name=proj_name,
         )
         scan_result = scanner.scan()
     elif args.graph:
         with open(args.graph) as f:
             scan_result = json.load(f)
     elif args.source:
+        proj_name = args.title or Path(args.source).resolve().name
         scanner = CodeScanner(
             root=args.source,
             languages=args.languages,
             exclude=args.exclude,
+            project_name=proj_name,
         )
         scan_result = scanner.scan()
     else:
@@ -137,10 +143,12 @@ def cmd_diagram(args):
 
 def cmd_full(args):
     """Full pipeline: scan → dual diagrams → optional AI docs."""
+    proj_name = args.title or Path(args.source).resolve().name
     scanner = CodeScanner(
         root=args.source,
         languages=args.languages,
         exclude=args.exclude,
+        project_name=proj_name,
     )
     scan_result = scanner.scan()
 

@@ -159,13 +159,14 @@ ROUTE_PATTERNS = {
         # Express
         (r"(?:app|router)\s*\.\s*(get|post|put|patch|delete|head|options|any)\s*\(\s*['\"]([^'\"]+)['\"]", "express"),
         (r"(?:app|router)\s*\.\s*(get|post|put|patch|delete)\s*\(\s*`(.*?)`", "express_template"),
-        # Next.js
+        # NestJS decorators
+        (r"@(Get|Post|Put|Patch|Delete|All|Head|Options)\s*\(\s*['\"]?([^'\"]*)['\"]?\)", "nestjs"),
+        # Next.js pages
         (r"(?:pages/|app/|router\s*\.\s*(?:get|post))", "nextjs"),
         # Vue Router — path: '/login' inside routes array
         (r"path:\s*['\"]([^'\"]+)['\"]", "vue_router"),
         # React Router — <Route path="/login"
         (r"<Route\s+path=['\"]([^'\"]+)['\"]", "react_router"),
-        # SvelteKit — file-based routing, no explicit pattern needed
     ],
     "python": [
         # Flask
@@ -185,6 +186,14 @@ ROUTE_PATTERNS = {
     "csharp": [
         (r"\[Http(Get|Post|Put|Patch|Delete|Route)\s*\(\s*['\"]([^'\"]+)['\"]", "aspnet"),
         (r"\[Route\s*\(\s*['\"]([^'\"]+)['\"]", "aspnet_route"),
+    ],
+    "java": [
+        (r"@(Get|Post|Put|Patch|Delete)Mapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?['\"]?([^'\"]*)['\"]?", "springboot"),
+        (r"@RequestMapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?['\"]([^'\"]+)['\"]", "springboot_request_mapping"),
+    ],
+    "kotlin": [
+        (r"@(Get|Post|Put|Patch|Delete)Mapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?['\"]?([^'\"]*)['\"]?", "springboot_kt"),
+        (r"@RequestMapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?['\"]([^'\"]+)['\"]", "springboot_kt_request_mapping"),
     ],
 }
 
@@ -209,8 +218,11 @@ FORM_PATTERNS = [
 class CodeScanner:
     """AST-based source code scanner for corporate applications."""
 
-    def __init__(self, root, languages=None, exclude=None):
+    def __init__(self, root, languages=None, exclude=None, project_name=None):
         self.root = Path(root).resolve()
+        self.project_name = project_name or self.root.name
+        self.prefix = re.sub(r"[^a-zA-Z0-9]", "_", self.project_name).strip("_").lower()
+        self._node_counter = 0
         self.languages = languages or []
         self.exclude = set(exclude or [])
         self.stats = {"files": 0, "skipped": 0, "errors": 0}
@@ -218,7 +230,8 @@ class CodeScanner:
         self.result = {
             "meta": {
                 "root": str(self.root),
-                "version": "1.0.0",
+                "project_name": self.project_name,
+                "version": "1.1.0",
                 "languages": [],
             },
             "endpoints": [],
@@ -365,6 +378,10 @@ class CodeScanner:
         # Import analysis for relations
         self._extract_imports(content, rel)
 
+        # Framework specific scans
+        self._scan_nextjs_app_router(content, rel)
+        self._scan_nestjs(content, rel)
+
     def _scan_py(self, content, rel):
         """Scan Python: routes, DB, validation, classes."""
         # Routes
@@ -398,6 +415,10 @@ class CodeScanner:
 
         # AST-based Python extraction (functions, classes)
         self._extract_py_ast(content, rel)
+
+        # Pydantic & SQLAlchemy
+        self._scan_pydantic(content, rel)
+        self._scan_sqlalchemy(content, rel)
 
         # Validators
         self._extract_validators(content, rel, "python", PY_VALIDATORS)
@@ -466,6 +487,8 @@ class CodeScanner:
     def _scan_oo(self, content, rel, lang):
         """Scan OOP languages: extract classes, methods."""
         self._extract_business_functions(content, rel, lang)
+        if lang in ("java", "kotlin"):
+            self._scan_springboot(content, rel, lang)
 
     def _scan_sql(self, content, rel):
         """Scan SQL: tables, columns, relations."""
@@ -640,11 +663,139 @@ class CodeScanner:
     def _file_id(self, rel):
         return rel.replace("/", "_").replace("\\", "_").replace(".", "_")
 
-    _node_counter = 0
-
     def _node_id(self):
-        CodeScanner._node_counter += 1
-        return f"n{CodeScanner._node_counter:04d}"
+        self._node_counter += 1
+        return f"{self.prefix}_n{self._node_counter:04d}"
+
+    def _scan_nextjs_app_router(self, content, rel):
+        """Scan Next.js App Router (app/**/route.ts and app/**/page.tsx)."""
+        rel_norm = rel.replace("\\", "/")
+        if "app/" in rel_norm and (rel_norm.endswith("/route.ts") or rel_norm.endswith("/route.js")):
+            parts = rel_norm.split("app/")[-1].split("/")[:-1]
+            clean_parts = []
+            for p in parts:
+                if p.startswith("(") and p.endswith(")"):
+                    continue
+                p_clean = re.sub(r"^\[\.\.\.(\w+)\]$", r"{\1}", p)
+                p_clean = re.sub(r"^\[(\w+)\]$", r"{\1}", p_clean)
+                clean_parts.append(p_clean)
+            clean_path = "/" + "/".join(clean_parts)
+
+            for m in re.finditer(r"export\s+(?:async\s+)?function\s+(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)", content):
+                method = m.group(1).upper()
+                self.result["endpoints"].append({
+                    "id": self._node_id(),
+                    "file": rel,
+                    "line": content[:m.start()].count("\n") + 1,
+                    "method": method,
+                    "path": clean_path or "/",
+                    "type": "nextjs_app_route",
+                    "auth": self._detect_auth(content, m.start()),
+                })
+        elif "app/" in rel_norm and re.search(r"/page\.(tsx|jsx|ts|js)$", rel_norm):
+            parts = rel_norm.split("app/")[-1].split("/")[:-1]
+            clean_parts = [re.sub(r"^\[(\w+)\]$", r"{\1}", p) for p in parts if not (p.startswith("(") and p.endswith(")"))]
+            clean_path = "/" + "/".join(clean_parts) if clean_parts else "/"
+            if "export default" in content:
+                self.result["endpoints"].append({
+                    "id": self._node_id(),
+                    "file": rel,
+                    "line": 1,
+                    "method": "GET",
+                    "path": clean_path,
+                    "type": "nextjs_app_page",
+                    "auth": self._detect_auth(content, 0),
+                })
+
+    def _scan_nestjs(self, content, rel):
+        """Scan NestJS controller and method decorators."""
+        if "@Controller" not in content:
+            return
+        ctrl_match = re.search(r"@Controller\s*\(\s*['\"]?([^'\"]*)['\"]?\s*\)", content)
+        base_path = ctrl_match.group(1).strip("/") if ctrl_match else ""
+
+        for m in re.finditer(r"@(Get|Post|Put|Patch|Delete|All)\s*\(\s*['\"]?([^'\"]*)['\"]?\s*\)", content):
+            method = m.group(1).upper()
+            sub_path = m.group(2).strip("/")
+            full_path = "/" + "/".join(p for p in [base_path, sub_path] if p)
+            self.result["endpoints"].append({
+                "id": self._node_id(),
+                "file": rel,
+                "line": content[:m.start()].count("\n") + 1,
+                "method": method if method != "ALL" else "ANY",
+                "path": full_path or "/",
+                "type": "nestjs",
+                "auth": self._detect_auth(content, m.start()),
+            })
+
+    def _scan_springboot(self, content, rel, lang):
+        """Scan Spring Boot RestController & RequestMapping annotations."""
+        if "@Controller" not in content and "@RestController" not in content:
+            return
+        base_match = re.search(r"@RequestMapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?['\"]([^'\"]+)['\"]", content)
+        base_path = base_match.group(1).strip("/") if base_match else ""
+
+        for m in re.finditer(r"@(Get|Post|Put|Patch|Delete)Mapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?['\"]?([^'\"]*)['\"]?\s*\)", content):
+            method = m.group(1).upper()
+            sub_path = m.group(2).strip("/")
+            full_path = "/" + "/".join(p for p in [base_path, sub_path] if p)
+            self.result["endpoints"].append({
+                "id": self._node_id(),
+                "file": rel,
+                "line": content[:m.start()].count("\n") + 1,
+                "method": method,
+                "path": full_path or "/",
+                "type": f"springboot_{lang}",
+                "auth": self._detect_auth(content, m.start()),
+            })
+
+    def _scan_pydantic(self, content, rel):
+        """Extract Pydantic schema validation models."""
+        for class_match in re.finditer(r"class\s+(\w+)\s*\(\s*(?:BaseModel|Schema)\s*\):([\s\S]*?)(?=\nclass\s|\ndef\s|\Z)", content):
+            class_name = class_match.group(1)
+            body = class_match.group(2)
+            for field_match in re.finditer(r"^\s*(\w+)\s*:\s*([\w\[\]\s,|]+)(?:=\s*Field\((.*?)\))?", body, re.MULTILINE):
+                field_name = field_match.group(1)
+                field_type = field_match.group(2).strip()
+                field_kwargs = field_match.group(3) or ""
+
+                rules = [f"type:{field_type}"]
+                if "gt=" in field_kwargs or "ge=" in field_kwargs: rules.append("min")
+                if "lt=" in field_kwargs or "le=" in field_kwargs: rules.append("max")
+                if "min_length=" in field_kwargs: rules.append("minLength")
+                if "max_length=" in field_kwargs: rules.append("maxLength")
+                if "regex=" in field_kwargs or "pattern=" in field_kwargs: rules.append("pattern")
+
+                self.result["validations"].append({
+                    "id": self._node_id(),
+                    "file": rel,
+                    "line": content[:class_match.start() + field_match.start()].count("\n") + 1,
+                    "field": f"{class_name}.{field_name}",
+                    "rule": "|".join(rules),
+                    "type": "pydantic",
+                })
+
+    def _scan_sqlalchemy(self, content, rel):
+        """Extract SQLAlchemy ForeignKeys and Relationships."""
+        for fk_match in re.finditer(r"ForeignKey\s*\(\s*['\"](\w+)\.(\w+)['\"]", content):
+            target_table = fk_match.group(1)
+            target_col = fk_match.group(2)
+            self.result["database"]["relations"].append({
+                "file": rel,
+                "line": content[:fk_match.start()].count("\n") + 1,
+                "target_table": target_table,
+                "target_column": target_col,
+                "type": "foreign_key",
+            })
+
+        for rel_match in re.finditer(r"relationship\s*\(\s*['\"](\w+)['\"]", content):
+            target_model = rel_match.group(1)
+            self.result["database"]["relations"].append({
+                "file": rel,
+                "line": content[:rel_match.start()].count("\n") + 1,
+                "target_table": target_model.lower(),
+                "type": "relationship",
+            })
 
     def _build_summary(self):
         s = self.result["summary"]

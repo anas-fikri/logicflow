@@ -130,6 +130,8 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
       <span style="font-size:11px;color:#8b949e;font-weight:400">— Business Flow (Modus Awam)</span>
     </div>
     <div class="mode-switch">
+      <button onclick="exportSVG()" class="mode-btn inactive" title="Export SVG vector">📥 SVG</button>
+      <button onclick="exportPNG()" class="mode-btn inactive" title="Export PNG image">📸 PNG</button>
       <span class="mode-btn active">💼 Alur Bisnis</span>
       <a href="__DEV_FILE__" class="mode-btn inactive">⚡ Developer Graph</a>
       <a href="dashboard.html" class="dash-btn">🏠 Dashboard</a>
@@ -142,6 +144,13 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
         <h3>Menu Aplikasi</h3>
         <div id="filter-box">
           <input type="text" id="search" placeholder="Cari menu atau fitur..." oninput="filterTree(this.value)">
+          <div class="method-pills" style="display:flex;gap:4px;margin-top:6px;">
+            <button class="pill active" onclick="setMethodFilter('ALL', this)" style="padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:#21262d;color:#c9d1d9;border:1px solid #30363d;cursor:pointer;">ALL</button>
+            <button class="pill" onclick="setMethodFilter('GET', this)" style="padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:#21262d;color:#8b949e;border:1px solid #30363d;cursor:pointer;">GET</button>
+            <button class="pill" onclick="setMethodFilter('POST', this)" style="padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:#21262d;color:#8b949e;border:1px solid #30363d;cursor:pointer;">POST</button>
+            <button class="pill" onclick="setMethodFilter('PUT', this)" style="padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:#21262d;color:#8b949e;border:1px solid #30363d;cursor:pointer;">PUT</button>
+            <button class="pill" onclick="setMethodFilter('DELETE', this)" style="padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:#21262d;color:#8b949e;border:1px solid #30363d;cursor:pointer;">DEL</button>
+          </div>
         </div>
       </div>
       <div id="node-tree"></div>
@@ -502,16 +511,33 @@ function renderSidebarTree() {
   });
 }
 
+let currentMethodFilter = 'ALL';
+
+function setMethodFilter(method, btn) {
+  currentMethodFilter = method;
+  document.querySelectorAll('.method-pills .pill').forEach(p => {
+    p.style.background = '#21262d';
+    p.style.color = '#8b949e';
+  });
+  if (btn) {
+    btn.style.background = '#1f6feb';
+    btn.style.color = '#fff';
+  }
+  filterTree(document.getElementById('search').value);
+}
+
 function filterTree(q) {
-  if (!q) { renderSidebarTree(); return; }
-  const ql = q.toLowerCase();
+  const ql = (q || '').toLowerCase();
   const treeEl = document.getElementById('node-tree');
   treeEl.innerHTML = '';
   treeRoot.descendants().forEach(d => {
-    if (d.data.name.toLowerCase().includes(ql)) {
+    const nameMatch = !ql || d.data.name.toLowerCase().includes(ql) || (d.data.path && d.data.path.toLowerCase().includes(ql));
+    const methodMatch = currentMethodFilter === 'ALL' || (d.data.method && d.data.method.toUpperCase() === currentMethodFilter);
+    if (nameMatch && methodMatch) {
       const item = document.createElement('div');
       item.className = 'tree-item';
       item.innerHTML = `<span class="label">${d.data.name}</span>`;
+      if (d.data.method) item.innerHTML += `<span class="badge">${d.data.method}</span>`;
       item.onclick = () => selectNode(d);
       treeEl.appendChild(item);
     }
@@ -529,6 +555,65 @@ function focusNode(name) {
     renderTree();
     selectNode(match);
   }
+}
+
+function exportSVG() {
+  const svgEl = document.getElementById('canvas');
+  if (!svgEl) return;
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute('style', 'background-color:#0d1117;');
+  const serializer = new XMLSerializer();
+  let svgStr = serializer.serializeToString(clone);
+  if (!svgStr.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+    svgStr = svgStr.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (SCAN.meta && SCAN.meta.project_name ? SCAN.meta.project_name : 'logicflow') + '_business_diagram.svg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportPNG() {
+  const svgEl = document.getElementById('canvas');
+  if (!svgEl) return;
+  const width = svgEl.clientWidth || 1600;
+  const height = svgEl.clientHeight || 1000;
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute('style', 'background-color:#0d1117;');
+  clone.setAttribute('width', width);
+  clone.setAttribute('height', height);
+  const serializer = new XMLSerializer();
+  let svgStr = serializer.serializeToString(clone);
+  if (!svgStr.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+    svgStr = svgStr.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  const img = new Image();
+  const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  img.onload = function() {
+    const canvas = document.createElement('canvas');
+    canvas.width = width * 2;
+    canvas.height = height * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+    URL.revokeObjectURL(url);
+    const pngUrl = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = pngUrl;
+    a.download = (SCAN.meta && SCAN.meta.project_name ? SCAN.meta.project_name : 'logicflow') + '_business_diagram.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+  img.src = url;
 }
 
 buildTree();
@@ -623,6 +708,8 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
       <span style="font-size:11px;color:#8b949e;font-weight:400">— Developer Force-Directed Graph</span>
     </div>
     <div class="mode-switch">
+      <button onclick="exportSVG()" class="mode-btn inactive" title="Export SVG vector">📥 SVG</button>
+      <button onclick="exportPNG()" class="mode-btn inactive" title="Export PNG image">📸 PNG</button>
       <a href="__BIZ_FILE__" class="mode-btn inactive">💼 Alur Bisnis</a>
       <span class="mode-btn active">⚡ Developer Graph</span>
       <a href="dashboard.html" class="dash-btn">🏠 Dashboard</a>
@@ -635,6 +722,13 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
         <h3>Code Nodes</h3>
         <div id="filter-box">
           <input type="text" id="search" placeholder="Filter node / path / SQL..." oninput="filterGraph(this.value)">
+          <div class="method-pills" style="display:flex;gap:4px;margin-top:6px;">
+            <button class="pill active" onclick="setDevMethodFilter('ALL', this)" style="padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:#21262d;color:#c9d1d9;border:1px solid #30363d;cursor:pointer;">ALL</button>
+            <button class="pill" onclick="setDevMethodFilter('GET', this)" style="padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:#21262d;color:#8b949e;border:1px solid #30363d;cursor:pointer;">GET</button>
+            <button class="pill" onclick="setDevMethodFilter('POST', this)" style="padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:#21262d;color:#8b949e;border:1px solid #30363d;cursor:pointer;">POST</button>
+            <button class="pill" onclick="setDevMethodFilter('PUT', this)" style="padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:#21262d;color:#8b949e;border:1px solid #30363d;cursor:pointer;">PUT</button>
+            <button class="pill" onclick="setDevMethodFilter('DELETE', this)" style="padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:#21262d;color:#8b949e;border:1px solid #30363d;cursor:pointer;">DEL</button>
+          </div>
         </div>
       </div>
       <div id="node-list"></div>
@@ -831,17 +925,107 @@ function renderSidebarList() {
   });
 }
 
+let currentDevMethodFilter = 'ALL';
+
+function setDevMethodFilter(method, btn) {
+  currentDevMethodFilter = method;
+  document.querySelectorAll('#sidebar .method-pills .pill').forEach(p => {
+    p.style.background = '#21262d';
+    p.style.color = '#8b949e';
+  });
+  if (btn) {
+    btn.style.background = '#1f6feb';
+    btn.style.color = '#fff';
+  }
+  filterGraph(document.getElementById('search').value);
+}
+
 function filterGraph(q) {
   const list = document.getElementById('node-list');
   list.innerHTML = '';
-  const ql = q.toLowerCase();
-  NODES.filter(n => n.label.toLowerCase().includes(ql)).forEach(n => {
+  const ql = (q || '').toLowerCase();
+  NODES.filter(n => {
+    const textMatch = !ql || n.label.toLowerCase().includes(ql) || (n.file && n.file.toLowerCase().includes(ql));
+    const methodMatch = currentDevMethodFilter === 'ALL' || (n.method && n.method.toUpperCase() === currentDevMethodFilter);
+    return textMatch && methodMatch;
+  }).forEach(n => {
     const item = document.createElement('div');
     item.className = 'node-item';
     item.innerHTML = `<span>${n.label}</span><span class="kind kind-${n.kind}">${n.kind}</span>`;
-    item.onclick = () => selectDevNode(n);
+    item.onclick = () => {
+      selectDevNode(n);
+      centerDevNode(n);
+    };
     list.appendChild(item);
   });
+}
+
+function centerDevNode(n) {
+  if (!n || n.x === undefined) return;
+  const svgEl = document.getElementById('canvas');
+  const width = svgEl.clientWidth;
+  const height = svgEl.clientHeight;
+  const transform = d3.zoomIdentity.translate(width / 2 - n.x * 1.2, height / 2 - n.y * 1.2).scale(1.2);
+  svg.transition().duration(500).call(zoom.transform, transform);
+}
+
+function exportSVG() {
+  const svgEl = document.getElementById('canvas');
+  if (!svgEl) return;
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute('style', 'background-color:#0d1117;');
+  const serializer = new XMLSerializer();
+  let svgStr = serializer.serializeToString(clone);
+  if (!svgStr.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+    svgStr = svgStr.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (SCAN.meta && SCAN.meta.project_name ? SCAN.meta.project_name : 'logicflow') + '_developer_diagram.svg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportPNG() {
+  const svgEl = document.getElementById('canvas');
+  if (!svgEl) return;
+  const width = svgEl.clientWidth || 1600;
+  const height = svgEl.clientHeight || 1000;
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute('style', 'background-color:#0d1117;');
+  clone.setAttribute('width', width);
+  clone.setAttribute('height', height);
+  const serializer = new XMLSerializer();
+  let svgStr = serializer.serializeToString(clone);
+  if (!svgStr.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+    svgStr = svgStr.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  const img = new Image();
+  const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  img.onload = function() {
+    const canvas = document.createElement('canvas');
+    canvas.width = width * 2;
+    canvas.height = height * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+    URL.revokeObjectURL(url);
+    const pngUrl = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = pngUrl;
+    a.download = (SCAN.meta && SCAN.meta.project_name ? SCAN.meta.project_name : 'logicflow') + '_developer_diagram.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+  img.src = url;
 }
 
 buildGraphData();
