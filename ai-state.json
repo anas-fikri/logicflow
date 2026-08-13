@@ -6,7 +6,8 @@
     "scanner": "AST code scanner with pre-compiled regex tables, binary-search line lookup, apiResource, controller linkage, seeder filtering, prerequisite tracking",
     "diagram": "Dual-mode diagram builder with Business Stage Waterfall visualization, prerequisite warning panel, XSS escaping, safe JSON script embedding",
     "dashboard": "Multi-project HTML management dashboard with XSS-safe project rendering",
-    "ai": "Natural language documentation generator with leak-safe HTTP error handling"
+    "ai": "Natural language documentation generator with leak-safe HTTP error handling",
+    "remote": "GitHub/GitLab remote repository cloning & syncing (shallow clone, tree URL parsing, token auth, auto-pull on scan)"
   },
   "bugs_found": [
     {
@@ -29,13 +30,20 @@
       "description": "Security audit: XSS vulns in diagram/dashboard/JS templates, path traversal in purge, atomic registry write, API key leak prevention",
       "status": "fixed",
       "fix_commit": "4500ad9"
+    },
+    {
+      "id": "RUFF-MYPY-001",
+      "severity": "MEDIUM",
+      "description": "40 static analysis / typing issues resolved (W605, BLE001, DTZ005, mypy Callable attributes)",
+      "status": "fixed",
+      "fix_commit": "3281515"
     }
   ],
   "progress": [
     "Fixed double icon bug & apiResource singular parameter stripping (3fed5d5)",
     "Full security & performance audit completed (8 vulns fixed, 5 optimizations applied)",
-    "All 3 projects rescanned in 416ms (cert26: 401 nodes, mailcow: 819 nodes, passman: 659 nodes)",
-    "Pushed audit fixes to origin/main (commit 4500ad9)",
-    "ai-toolkit engine updated & ai-bug-scan loop executed: 0 bugs found (clean state)"
+    "Cleaned 40 ruff + mypy issues across codebase (3281515)",
+    "Added remote repository scanning via GitHub/GitLab URL (add-remote, sync, auto-pull on scan, tree URL parsing)",
+    "Smoke tested remote scanning against public GitHub repository (expressjs/express) — 805 nodes, 246 APIs scanned clean"
   ]
 }
