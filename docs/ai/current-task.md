@@ -12,8 +12,8 @@
    - Menambahkan kepanjangan untuk semua singkatan teknis dan bisnis pada `README.md`, `project-context.md`, dan dokumentasi proyek.
 
 2. **Multi-Project Management Guide**:
-   - Menambahkan panduan langkah-demi-langkah pengelolaan banyak proyek pada `dashboard.html` (`codemap project add`, `scan`, `scan-all`, `dashboard`).
-   - Menyajikan informasi alur manajemen registry `~/.codemap/projects.json` secara mendalam di `README.md`.
+   - Menambahkan panduan langkah-demi-langkah pengelolaan banyak proyek pada `dashboard.html` (`logicflow project add`, `scan`, `scan-all`, `dashboard`).
+   - Menyajikan informasi alur manajemen registry `~/.logicflow/projects.json` secara mendalam di `README.md`.
 
 3. **Automatic Dual-Mode Default**:
-   - Memastikan semua perintah pemindaian (`codemap diagram`, `full`, `project scan`, `project open`) secara otomatis memproses dan menyajikan **KEDUA mode diagram** (`business.html` + `developer.html`).
+   - Memastikan semua perintah pemindaian (`logicflow diagram`, `full`, `project scan`, `project open`) secara otomatis memproses dan menyajikan **KEDUA mode diagram** (`business.html` + `developer.html`).

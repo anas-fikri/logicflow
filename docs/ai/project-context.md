@@ -1,6 +1,6 @@
 # Project Context
 
-Project: **CodeMap** — Source Code Visualizer, Dual-Mode Diagram Generator & Multi-Project Dashboard
+Project: **LogicFlow** — Source Code Visualizer, Dual-Mode Diagram Generator & Multi-Project Dashboard
 
 **Project Root:** `/Users/anasfikri/Documents/Projects/others/apps-diagram`
 
@@ -11,15 +11,15 @@ Aplikasi CLI (*Command Line Interface* / Antarmuka Baris Perintah) berbasis Pyth
 1. **Mode Awam (`business.html`)**: Business Flow *horizontal tree card-based* dengan label Bahasa Indonesia untuk Business Analyst (BA) / Client / Pengguna Non-Teknis.
 2. **Mode Developer (`developer.html`)**: Developer Force-Directed Graph interaktif menggunakan D3.js (*Data-Driven Documents*) untuk menginspeksi API (*Application Programming Interface*) Route, Business Logic (Controller), Validation, & DB (*Database*).
 
-Dilengkapi **Unified Multi-Project Dashboard (`dashboard.html`)** yang diproduksi oleh perintah CLI `codemap project dashboard` untuk mengelola banyak proyek dalam satu tampilan terpusat. Setiap komponen diagram dan dashboard dilengkapi dengan **Legend Singkatan & Istilah (Glossary)**.
+Dilengkapi **Unified Multi-Project Dashboard (`dashboard.html`)** yang diproduksi oleh perintah CLI `logicflow project dashboard` untuk mengelola banyak proyek dalam satu tampilan terpusat. Setiap komponen diagram dan dashboard dilengkapi dengan **Legend Singkatan & Istilah (Glossary)**.
 
 ## Stack & Arsitektur
 
 - **CLI Engine:** Python 3.11 (Standard Library, argparse, no external dependencies)
 - **Scanner:** AST (*Abstract Syntax Tree*) parsing + regex patterns (Multi-framework)
 - **Diagram Generator:** D3.js v7 (*Data-Driven Documents*, inline 279 KB, offline-ready, no CDN)
-- **Project Registry:** `~/.codemap/projects.json` & `~/.codemap/dashboard.html`
-- **Output:** `~/.codemap/output/<name>/{scan.json, business.html, developer.html}`
+- **Project Registry:** `~/.logicflow/projects.json` & `~/.logicflow/dashboard.html`
+- **Output:** `~/.logicflow/output/<name>/{scan.json, business.html, developer.html}`
 
 ## Glossary of Abbreviations (Legend Singkatan)
 

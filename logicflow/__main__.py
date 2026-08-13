@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CodeMap CLI — Corporate source code scanner & interactive diagram builder.
+"""LogicFlow CLI — Corporate source code visualizer & dual-mode diagram generator.
 
 Modes:
   scan       Extract endpoints, controllers, validation, DB relations (no AI)
@@ -16,10 +16,10 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from codemap.scanner import CodeScanner
-from codemap.ai import AIDocumenter
-from codemap.diagram import DiagramBuilder
-from codemap.project import setup_project_subparser
+from logicflow.scanner import CodeScanner
+from logicflow.ai import AIDocumenter
+from logicflow.diagram import DiagramBuilder
+from logicflow.project import setup_project_subparser
 
 VERSION = "1.1.0"
 
@@ -50,8 +50,8 @@ def cmd_scan(args):
         else:
             print(md)
     elif args.format == "both":
-        json_path = args.output or "codemap.json"
-        md_path = args.output.replace(".json", ".md") if args.output else "codemap.md"
+        json_path = args.output or "logicflow.json"
+        md_path = args.output.replace(".json", ".md") if args.output else "logicflow.md"
         with open(json_path, "w") as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
         with open(md_path, "w") as f:
@@ -114,11 +114,11 @@ def cmd_diagram(args):
         sys.exit(1)
 
     builder = DiagramBuilder()
-    title = args.title or "CodeMap"
+    title = args.title or "LogicFlow"
 
     if args.mode == "both":
         biz_html, dev_html = builder.build_both(scan_result, title=title)
-        out_base = args.output or "codemap"
+        out_base = args.output or "logicflow"
         biz_path = f"{out_base}-business.html"
         dev_path = f"{out_base}-developer.html"
         with open(biz_path, "w") as f:
@@ -129,7 +129,7 @@ def cmd_diagram(args):
         print(f"Developer Diagram: {dev_path} ({len(dev_html)} bytes)")
     else:
         html = builder.build(scan_result, title=title, mode=args.mode)
-        out_path = args.output or f"codemap-{args.mode}.html"
+        out_path = args.output or f"logicflow-{args.mode}.html"
         with open(out_path, "w") as f:
             f.write(html)
         print(f"{args.mode.title()} Diagram: {out_path} ({len(html)} bytes)")
@@ -144,7 +144,7 @@ def cmd_full(args):
     )
     scan_result = scanner.scan()
 
-    base = args.output or "codemap"
+    base = args.output or "logicflow"
     json_path = f"{base}.json"
     biz_path = f"{base}-business.html"
     dev_path = f"{base}-developer.html"
@@ -155,7 +155,7 @@ def cmd_full(args):
 
     # Save dual diagrams
     builder = DiagramBuilder()
-    biz_html, dev_html = builder.build_both(scan_result, title=args.title or "CodeMap")
+    biz_html, dev_html = builder.build_both(scan_result, title=args.title or "LogicFlow")
     with open(biz_path, "w") as f:
         f.write(biz_html)
     with open(dev_path, "w") as f:
@@ -181,10 +181,10 @@ def cmd_full(args):
 
 def main():
     p = argparse.ArgumentParser(
-        prog="codemap",
-        description="CodeMap — Source Code Scanner & Dual-Mode Diagram Builder",
+        prog="logicflow",
+        description="LogicFlow — Source Code Visualizer & Dual-Mode Diagram Generator",
     )
-    p.add_argument("--version", action="version", version=f"CodeMap v{VERSION}")
+    p.add_argument("--version", action="version", version=f"LogicFlow v{VERSION}")
     sub = p.add_subparsers(dest="command", required=True)
 
     # scan

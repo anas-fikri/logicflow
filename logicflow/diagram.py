@@ -1,4 +1,4 @@
-"""CodeMap Diagram — Split Dual-Mode HTML Diagram Builder.
+"""LogicFlow Diagram — Split Dual-Mode HTML Diagram Builder.
 
 Modes:
   business   Awam / BA mode: clean horizontal tree, card-based, Indonesian labels, high-level
@@ -24,7 +24,7 @@ BUSINESS_TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>__TITLE__ — Business Flow | CodeMap</title>
+<title>__TITLE__ — Business Flow | LogicFlow</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; }
@@ -546,7 +546,7 @@ DEV_TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>__TITLE__ — Developer Graph | CodeMap</title>
+<title>__TITLE__ — Developer Graph | LogicFlow</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; overflow: hidden; }
@@ -855,7 +855,7 @@ renderGraph();
 class DiagramBuilder:
     """Build interactive HTML diagram (business or developer mode)."""
 
-    def build(self, scan_result, title="CodeMap", mode="business", dev_file=None, biz_file=None):
+    def build(self, scan_result, title="LogicFlow", mode="business", dev_file=None, biz_file=None):
         """Build single mode HTML diagram."""
         d3_js = load_d3()
         scan_json = json.dumps(scan_result, ensure_ascii=False)
@@ -873,7 +873,7 @@ class DiagramBuilder:
             html = html.replace("__DEV_FILE__", dev_file or "developer.html")
             return html
 
-    def build_both(self, scan_result, title="CodeMap"):
+    def build_both(self, scan_result, title="LogicFlow"):
         """Build dual mode: returns (business_html, developer_html)."""
         biz = self.build(scan_result, title=title, mode="business", dev_file="developer.html", biz_file="business.html")
         dev = self.build(scan_result, title=title, mode="developer", dev_file="developer.html", biz_file="business.html")

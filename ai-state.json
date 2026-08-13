@@ -1,7 +1,7 @@
 {
   "version": 1,
   "last_session": "2026-08-13T02:46:00Z",
-  "context": "CodeMap — Source Code Scanner & Dual-Mode Diagram Builder (Mode Awam Business Flow & Mode Developer Force Graph + Unified Project Dashboard).",
+  "context": "LogicFlow — Source Code Scanner & Dual-Mode Diagram Builder (Mode Awam Business Flow & Mode Developer Force Graph + Unified Project Dashboard).",
   "modules": {
     "scanner": {
       "status": "active",
@@ -14,11 +14,11 @@
     },
     "dashboard": {
       "status": "active",
-      "output": "~/.codemap/dashboard.html"
+      "output": "~/.logicflow/dashboard.html"
     },
     "project": {
       "status": "active",
-      "registry": "~/.codemap/projects.json",
+      "registry": "~/.logicflow/projects.json",
       "projects_registered": 3
     }
   },

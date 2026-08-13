@@ -55,8 +55,8 @@
 
 ### Project Manager (`codemap/project.py` — 350+ lines)
 
-**Registry:** `~/.codemap/projects.json`
-**Output:** `~/.codemap/output/<name>/{scan.json,diagram.html}`
+**Registry:** `~/.logicflow/projects.json`
+**Output:** `~/.logicflow/output/<name>/{scan.json,diagram.html}`
 
 **Commands:** add, list, scan, scan-all, diagram, info, remove, open
 

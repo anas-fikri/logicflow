@@ -3,10 +3,10 @@
 ## 2026-08-13 — Dual-Mode Diagram & Project Dashboard Implementation
 
 ### Summary
-Successfully refactored CodeMap workspace to professional standards:
+Successfully refactored LogicFlow workspace to professional standards:
 1. Removed all root experimental HTML, JSON, and temporary Python scripts.
 2. Built Dual-Mode HTML Diagram Generator (`business.html` and `developer.html`).
-3. Built Unified Project Dashboard (`dashboard.html`) and connected it to `codemap project dashboard` command.
+3. Built Unified Project Dashboard (`dashboard.html`) and connected it to `logicflow project dashboard` command.
 4. Updated all `docs/ai/*.md` files, `README.md`, `ai-state.json`, and committed changes to git (`ca277ad`).
 
 ### Key Artifacts

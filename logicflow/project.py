@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""CodeMap Project Manager — registry for managing multiple project scans & diagrams.
+"""LogicFlow Project Manager — registry for managing multiple project scans & diagrams.
 
-Stores project metadata in ~/.codemap/projects.json
+Stores project metadata in ~/.logicflow/projects.json
 Each project tracks: source path, scan JSON, business diagram, developer diagram, last scan date, stats.
 
 Usage:
-  codemap project add <name> <source-path> [--title TITLE]
-  codemap project list
-  codemap project scan <name>           # re-scan + generate business & dev diagrams
-  codemap project diagram <name>        # regenerate diagrams from existing scan
-  codemap project info <name>           # show project details
-  codemap project remove <name>
-  codemap project open <name> [--mode business|developer]
-  codemap project dashboard             # open unified dashboard in browser
-  codemap project scan-all              # re-scan all projects
+  logicflow project add <name> <source-path> [--title TITLE]
+  logicflow project list
+  logicflow project scan <name>           # re-scan + generate business & dev diagrams
+  logicflow project diagram <name>        # regenerate diagrams from existing scan
+  logicflow project info <name>           # show project details
+  logicflow project remove <name>
+  logicflow project open <name> [--mode business|developer]
+  logicflow project dashboard             # open unified dashboard in browser
+  logicflow project scan-all              # re-scan all projects
 """
 
 import json
@@ -23,7 +23,7 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 
-REGISTRY_DIR = Path.home() / ".codemap"
+REGISTRY_DIR = Path.home() / ".logicflow"
 REGISTRY_FILE = REGISTRY_DIR / "projects.json"
 OUTPUT_DIR = REGISTRY_DIR / "output"
 DASHBOARD_FILE = REGISTRY_DIR / "dashboard.html"
@@ -47,7 +47,7 @@ def _save_registry(reg):
 def _generate_dashboard(reg):
     """Generate global dashboard.html."""
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from codemap.dashboard import DashboardBuilder
+    from logicflow.dashboard import DashboardBuilder
 
     builder = DashboardBuilder()
     html = builder.build(reg)
@@ -94,7 +94,7 @@ def cmd_project_add(args):
     print(f"Project '{name}' added.")
     print(f"  Source: {source}")
     print(f"  Title:  {title}")
-    print(f"  Run 'codemap project scan {name}' to generate dual-mode diagrams.")
+    print(f"  Run 'logicflow project scan {name}' to generate dual-mode diagrams.")
 
 
 def cmd_project_list(args):
@@ -102,7 +102,7 @@ def cmd_project_list(args):
     reg = _load_registry()
     projects = reg["projects"]
     if not projects:
-        print("No projects registered. Use 'codemap project add <name> <path>' to add one.")
+        print("No projects registered. Use 'logicflow project add <name> <path>' to add one.")
         return
 
     print(f"{'Name':<18} {'Title':<22} {'Menus':>5} {'APIs':>5} {'Nodes':>6} {'Last Scan':<19}")
@@ -135,8 +135,8 @@ def cmd_project_scan(args):
     dev_file = str(d / "developer.html")
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from codemap.scanner import CodeScanner
-    from codemap.diagram import DiagramBuilder
+    from logicflow.scanner import CodeScanner
+    from logicflow.diagram import DiagramBuilder
 
     print(f"Scanning {source} ...")
     scanner = CodeScanner(root=source, exclude=exclude)
@@ -197,11 +197,11 @@ def cmd_project_diagram(args):
     p = reg["projects"][name]
     scan_file = p.get("scan_file")
     if not scan_file or not os.path.isfile(scan_file):
-        print(f"Error: no scan file for project '{name}'. Run 'codemap project scan {name}' first.")
+        print(f"Error: no scan file for project '{name}'. Run 'logicflow project scan {name}' first.")
         sys.exit(1)
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from codemap.diagram import DiagramBuilder
+    from logicflow.diagram import DiagramBuilder
 
     with open(scan_file) as f:
         result = json.load(f)
@@ -283,7 +283,7 @@ def cmd_project_open(args):
         biz_path = p.get("business_diagram")
         dev_path = p.get("developer_diagram")
         if not biz_path or not os.path.isfile(biz_path):
-            print(f"Error: diagrams for '{name}' not found. Run 'codemap project scan {name}' first.")
+            print(f"Error: diagrams for '{name}' not found. Run 'logicflow project scan {name}' first.")
             sys.exit(1)
         url_biz = f"file://{os.path.abspath(biz_path)}"
         url_dev = f"file://{os.path.abspath(dev_path)}"
@@ -295,7 +295,7 @@ def cmd_project_open(args):
         target_key = "business_diagram" if mode == "business" else "developer_diagram"
         file_path = p.get(target_key)
         if not file_path or not os.path.isfile(file_path):
-            print(f"Error: no {mode} diagram for '{name}'. Run 'codemap project scan {name}' first.")
+            print(f"Error: no {mode} diagram for '{name}'. Run 'logicflow project scan {name}' first.")
             sys.exit(1)
 
         url = f"file://{os.path.abspath(file_path)}"

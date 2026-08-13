@@ -22,9 +22,9 @@
 **Reason:** 9Router default SSE streaming. Reasoning models (deepseek-r1) butuh full response parsing — `reasoning_content` field. Streaming incompatible.
 **Status:** IMPLEMENTED in `ai.py`
 
-### Decision: Project registry in `~/.codemap/` not in project dir
+### Decision: Project registry in `~/.logicflow/` not in project dir
 **Date:** 2026-08-13  
-**Reason:** Scan JSON dan HTML output tidak ikut di-commit. Registry di home directory supaya persistensi antar clone. Output per project: `~/.codemap/output/<name>/`.
+**Reason:** Scan JSON dan HTML output tidak ikut di-commit. Registry di home directory supaya persistensi antar clone. Output per project: `~/.logicflow/output/<name>/`.
 **Status:** IMPLEMENTED in `project.py`
 
 ## Scanner Patterns

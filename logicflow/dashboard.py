@@ -1,4 +1,4 @@
-"""CodeMap Dashboard — HTML Generator for Project Registry.
+"""LogicFlow Dashboard — HTML Generator for Project Registry.
 
 Generates a unified dashboard.html showing all registered projects,
 their stats, and links to open Business Flow or Developer Graph.
@@ -12,7 +12,7 @@ DASHBOARD_TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CodeMap Dashboard — Management & Visualisasi Multi-Project</title>
+<title>LogicFlow Dashboard — Management & Visualisasi Multi-Project</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
@@ -83,7 +83,7 @@ footer { border-top: 1px solid #30363d; padding: 16px 32px; text-align: center; 
 <header>
   <div>
     <div class="brand">
-      <h1>CodeMap Dashboard</h1>
+      <h1>LogicFlow Dashboard</h1>
       <span class="version">v1.1.0</span>
     </div>
     <div class="subtitle">Management & Visualisasi Multi-Project (Otomatis Dual-Mode: Business Flow & Developer Graph)</div>
@@ -93,23 +93,23 @@ footer { border-top: 1px solid #30363d; padding: 16px 32px; text-align: center; 
 <main>
   <!-- Multi-Project Guide -->
   <section class="guide-banner">
-    <h2>🗺️ Cara Pengelolaan Multi-Project di CodeMap Dashboard</h2>
-    <p>CodeMap menyimpan seluruh metadata project di registry <code>~/.codemap/projects.json</code>. Setiap project yang discan akan **otomatis menghasilkan 2 mode visualisasi** sekaligus (Mode Awam & Mode Developer).</p>
+    <h2>🗺️ Cara Pengelolaan Multi-Project di LogicFlow Dashboard</h2>
+    <p>LogicFlow menyimpan seluruh metadata project di registry <code>~/.logicflow/projects.json</code>. Setiap project yang discan akan **otomatis menghasilkan 2 mode visualisasi** sekaligus (Mode Awam & Mode Developer).</p>
     <div class="guide-steps">
       <div class="step-card">
         <div class="step-num">1. Tambah Project Baru</div>
         <div>Daftarkan codebase ke registry:</div>
-        <code>codemap project add &lt;nama&gt; &lt;path_source&gt; --title "&lt;Judul&gt;"</code>
+        <code>logicflow project add &lt;nama&gt; &lt;path_source&gt; --title "&lt;Judul&gt;"</code>
       </div>
       <div class="step-card">
         <div class="step-num">2. Scan Otomatis Both Modes</div>
         <div>Pindai & buat diagram dual-mode:</div>
-        <code>codemap project scan &lt;nama&gt;</code>
+        <code>logicflow project scan &lt;nama&gt;</code>
       </div>
       <div class="step-card">
         <div class="step-num">3. Scan Semua Project</div>
         <div>Pindai ulang seluruh project sekaligus:</div>
-        <code>codemap project scan-all</code>
+        <code>logicflow project scan-all</code>
       </div>
     </div>
   </section>
@@ -144,7 +144,7 @@ footer { border-top: 1px solid #30363d; padding: 16px 32px; text-align: center; 
       <div class="legend-item">
         <div class="term">CLI</div>
         <div class="full">Command Line Interface</div>
-        <div class="desc">Antarmuka baris perintah terminal tempat menjalankan aplikasi CodeMap.</div>
+        <div class="desc">Antarmuka baris perintah terminal tempat menjalankan aplikasi LogicFlow.</div>
       </div>
       <div class="legend-item">
         <div class="term">BA</div>
@@ -174,14 +174,14 @@ footer { border-top: 1px solid #30363d; padding: 16px 32px; text-align: center; 
       <div class="legend-item">
         <div class="term">HTML</div>
         <div class="full">HyperText Markup Language</div>
-        <div class="desc">Format file halaman web interaktif yang dihasilkan oleh CodeMap untuk visualisasi.</div>
+        <div class="desc">Format file halaman web interaktif yang dihasilkan oleh LogicFlow untuk visualisasi.</div>
       </div>
     </div>
   </section>
 </main>
 
 <footer>
-  CodeMap CLI — Corporate Source Code Visualizer & Multi-Project Dashboard
+  LogicFlow CLI — Corporate Source Code Visualizer & Multi-Project Dashboard
 </footer>
 
 <script>
@@ -227,7 +227,7 @@ class DashboardBuilder:
             nodes = stats.get("nodes", 0)
             langs = ", ".join(stats.get("languages", [])) or "Multi-lang"
 
-            # Output paths relative to ~/.codemap/dashboard.html
+            # Output paths relative to ~/.logicflow/dashboard.html
             biz_url = f"output/{name}/business.html"
             dev_url = f"output/{name}/developer.html"
 
@@ -272,9 +272,9 @@ class DashboardBuilder:
     <h3>Belum Ada Project Terdaftar</h3>
     <p>Daftarkan project pertama Anda dengan perintah CLI berikut:</p>
     <br>
-    <code>codemap project add myapp /path/to/source --title "My Application"</code>
+    <code>logicflow project add myapp /path/to/source --title "My Application"</code>
     <br><br>
-    <code>codemap project scan myapp</code>
+    <code>logicflow project scan myapp</code>
   </div>
 """
         else:

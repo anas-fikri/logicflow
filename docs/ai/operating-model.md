@@ -2,7 +2,7 @@
 
 ## Lifecycle
 
-CodeMap mengikuti pipeline `scan → diagram` (non-AI) atau `scan → ai → diagram` (with AI docs).
+LogicFlow mengikuti pipeline `scan → diagram` (non-AI) atau `scan → ai → diagram` (with AI docs).
 
 ### Scan Phase
 1. User provide source directory
@@ -28,17 +28,17 @@ CodeMap mengikuti pipeline `scan → diagram` (non-AI) atau `scan → ai → dia
 5. Output: Markdown documentation per endpoint
 
 ### Project Management
-- Registry: `~/.codemap/projects.json`
-- Per-project output: `~/.codemap/output/<name>/{scan.json,diagram.html}`
+- Registry: `~/.logicflow/projects.json`
+- Per-project output: `~/.logicflow/output/<name>/{scan.json,diagram.html}`
 - `scan-all` untuk batch re-scan semua project terdaftar
 
 ## Source of Truth
 
 | What | Where |
 |------|-------|
-| Project registry | `~/.codemap/projects.json` |
-| Per-project scan data | `~/.codemap/output/<name>/scan.json` |
-| Per-project diagram | `~/.codemap/output/<name>/diagram.html` |
+| Project registry | `~/.logicflow/projects.json` |
+| Per-project scan data | `~/.logicflow/output/<name>/scan.json` |
+| Per-project diagram | `~/.logicflow/output/<name>/diagram.html` |
 | Scanner patterns | `codemap/scanner.py` → `ROUTE_PATTERNS` dict |
 | Diagram templates | `codemap/diagram.py` → `build()` method |
 | Human labels mapping | `codemap/diagram.py` → `HUMAN_LABELS` dict |
@@ -47,6 +47,6 @@ CodeMap mengikuti pipeline `scan → diagram` (non-AI) atau `scan → ai → dia
 
 ## Roles
 
-- **Hermes Agent** — primary AI developer untuk CodeMap
+- **Hermes Agent** — primary AI developer untuk LogicFlow
 - **Codex/Claude Code** — bisa delegate untuk task tertentu (lihat AGENTS.md)
 - **User (Anas)** — PM + tester. Approve design, verify usability.

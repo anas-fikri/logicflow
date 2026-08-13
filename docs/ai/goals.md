@@ -11,7 +11,7 @@ Build a portable, self-contained source code scanner + interactive diagram tool 
 - [x] Business Flow tab — horizontal tree, label bahasa Indonesia, card-based expand/collapse
 - [x] Validation extraction (form rules, required fields, regex patterns)
 - [x] Database table/relation extraction (MySQL syntax)
-- [x] Project registry (`codemap project` CLI) dengan `scan`, `scan-all`, `open`, `list`
+- [x] Project registry (`logicflow project` CLI) dengan `scan`, `scan-all`, `open`, `list`
 - [x] AI documentation mode (LLM API integration, stream:false)
 
 ### In Progress
@@ -35,7 +35,7 @@ Build a portable, self-contained source code scanner + interactive diagram tool 
 | Diagram render (500 nodes) | < 3 detik |
 | Framework detection | ≥ 3 framework |
 | Label quality (Indonesian) | semua menu label readable |
-| CLI usability | 1-command: `codemap project scan <name>` |
+| CLI usability | 1-command: `logicflow project scan <name>` |
 | Zero console errors | 100% clean |
 
 ## Priority (when in doubt)

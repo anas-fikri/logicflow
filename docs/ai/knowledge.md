@@ -102,8 +102,8 @@ Root (App Name)
     "cert26": {
       "source": "/path/to/backend",
       "title": "Certificate26",
-      "scan_file": "~/.codemap/output/cert26/scan.json",
-      "diagram_file": "~/.codemap/output/cert26/diagram.html",
+      "scan_file": "~/.logicflow/output/cert26/scan.json",
+      "diagram_file": "~/.logicflow/output/cert26/diagram.html",
       "last_scan": "2026-08-13T08:17:58",
       "stats": {"nodes": 127, "menus": 8, "apis": 27, "validations": 48},
       "created": "2026-08-13T08:17:55",
@@ -121,4 +121,4 @@ Root (App Name)
 ## 2026-08-13T01:56:01Z
 - Task: 
 - Status: COMPLETED
-- Finding: CodeMap engine: scanner supports 7+ frameworks (Laravel, Vue Router, Express, Flask, FastAPI, Gin, ASP.NET). D3 v7 inline (279KB) — no CDN. Business Flow horizontal tree with Indonesian labels + auto-pretty fallback. Project registry at ~/.codemap/projects.json. stream:false mandatory for 9Router/OmniRoute. Single-group route patterns for Vue Router (path only, no method).
+- Finding: LogicFlow engine: scanner supports 7+ frameworks (Laravel, Vue Router, Express, Flask, FastAPI, Gin, ASP.NET). D3 v7 inline (279KB) — no CDN. Business Flow horizontal tree with Indonesian labels + auto-pretty fallback. Project registry at ~/.logicflow/projects.json. stream:false mandatory for 9Router/OmniRoute. Single-group route patterns for Vue Router (path only, no method).
