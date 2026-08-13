@@ -1,25 +1,25 @@
 # Project Context
 
-Project: **CodeMap** — AI-assisted source code scanner & interactive diagram builder
+Project: **CodeMap** — Source Code Scanner & Dual-Mode Interactive Diagram Builder
 
 **Project Root:** `/Users/anasfikri/Documents/Projects/others/apps-diagram`
 
 ## Summary
 
-CLI tool (Python) untuk memindai source code codebase manapun → extract routes/endpoints, validasi, DB relations, forms, business logic → generate interactive HTML diagram (D3.js) untuk business flow, code flow, database, dan validasi. Support multi-framework: Laravel/PHP, Vue3/TypeScript, Express/Node.js, Flask/FastAPI/Python.
+CLI tool (Python 3.11) untuk memindai source code codebase (Laravel, Vue Router, Express, Flask, FastAPI, Go, C#) tanpa AI → menghasilkan 2 mode diagram HTML interaktif:
 
-Engine-nya modular: `scan → diagram` pipeline. Bisa berdiri sendiri (non-AI) atau pakai AI LLM untuk generate dokumentasi natural language per endpoint.
+1. **Mode Awam (`business.html`)**: Business Flow horizontal tree card-based dengan label Indonesia untuk Business Analyst / Client.
+2. **Mode Developer (`developer.html`)**: Developer Force-Directed Graph interaktif untuk menginspeksi route, logic, validation, & DB.
 
-Target user: developer dan business analyst yang butuh visualisasi cepat tanpa harus baca semua kode.
+Juga dilengkapi **Unified Project Dashboard (`dashboard.html`)** yang diproduksi oleh `codemap project dashboard`.
 
 ## Stack
 
-- **CLI Engine:** Python 3.11, argparse, no external deps
-- **Scanner:** AST parsing via `tree-sitter` + regex fallback; multi-language
-- **Diagram:** D3.js v7 (inline, 279KB); tree layout + force-directed
-- **AI Docs:** HTTP calls ke LLM API (9Router/OmniRoute); streaming disabled
-- **Registry:** `~/.codemap/projects.json` + `~/.codemap/output/<name>/`
-- **Venv:** hermes venv (`~/hermes/venv/bin/python3`)
+- **CLI Engine:** Python 3.11, argparse, no external dependencies
+- **Scanner:** AST parsing + regex patterns (Multi-framework)
+- **Diagram:** D3.js v7 (inline 279KB, offline-ready, no CDN)
+- **Registry:** `~/.codemap/projects.json` & `~/.codemap/dashboard.html`
+- **Output:** `~/.codemap/output/<name>/{scan.json, business.html, developer.html}`
 
 ## Directory Structure
 
@@ -27,69 +27,19 @@ Target user: developer dan business analyst yang butuh visualisasi cepat tanpa h
 apps-diagram/
 ├── codemap/                    # Main package
 │   ├── __main__.py             # CLI entry point (scan/ai/diagram/full/project)
-│   ├── scanner.py              # AST + regex route scanner (739 lines)
-│   ├── diagram.py              # D3 HTML diagram builder (1247 lines)
-│   ├── ai.py                   # LLM documentation generator (253 lines)
-│   └── project.py              # Project registry manager (350+ lines)
-├── parsers/                    # Language-specific parsers (stub/extensible)
+│   ├── scanner.py              # AST + regex scanner engine
+│   ├── diagram.py              # Dual-mode HTML diagram dispatcher
+│   ├── dashboard.py            # Unified dashboard HTML builder
+│   ├── ai.py                   # Optional LLM documentation generator
+│   └── project.py              # Project registry CLI manager
 ├── vendor/
 │   └── d3.v7.min.js            # D3 inline bundle (279KB)
 ├── docs/ai/                    # AI toolkit documentation
 └── .codemap/                   # Runtime output (gitignored)
-    └── output/<name>/
-        ├── scan.json
-        └── diagram.html
 ```
 
 ## Constraints
 
-1. **D3 must be inline** — `vendor/d3.v7.min.js` bundled directly in HTML output. CDN tidak boleh. Alasan: CORS + offline reliability.
-2. **`stream: false`** — Semua payload ke 9Router/OmniRoute harus include `"stream": false`. Default adalah SSE; reasoning models butuh full response.
-3. **No SQLite** — User preference. Jangan pakai SQLite untuk persistence.
-4. **Node ID prefix** — Cross-app merged diagrams butuh prefix per repo untuk menghindari collision (Belum diimplementasi — lihat next-tasks).
-5. **Scan JSON files** — Di-generate per project, tidak di-commit ke repo bersama. Local registry cukup.
-6. **Sudo blocked** — Jangan gunakan sudo untuk operasi apapun.
-
-## Conventions
-
-### CLI Commands
-
-```bash
-# Individual steps
-codemap scan <source-dir> -o scan.json
-codemap diagram --graph scan.json -o diagram.html -t "App Title"
-
-# Full pipeline
-codemap full <source-dir> -o myapp --title "My App"
-
-# Project management
-codemap project add <name> <source> [--title TITLE]
-codemap project list
-codemap project scan <name>       # scan + diagram
-codemap project scan-all          # all projects
-codemap project open <name>       # open diagram in browser
-codemap project info <name>
-codemap project remove <name> [--purge]
-
-# Output location
-~/.codemap/projects.json          # registry
-~/.codemap/output/<name>/         # per-project artifacts
-```
-
-### Naming
-
-- `scan.json` — hasil AST extraction dari scanner
-- `*-v4.html` — diagram output versi latest (v4 = horizontal tree + human labels)
-- `-fresh-scan.json` — scan dari codebase fresh (belum di-register)
-- `codemap-*.html` — diagram lama (legacy force-directed)
-
-### Scanner Pattern Rules
-
-- Route patterns HARUS punya capture group untuk method + path (2 group minimum) untuk Express/Laravel
-- Vue Router patterns punya 1 group (path only) — dipisah di dispatch logic
-- File extension → language dispatch:
-  - `.py` → `python`
-  - `.js/.ts/.vue/.svelte` → `javascript`
-  - `.php` → `php`
-  - `.cs` → `csharp`
-  - `.go` → `golang`
+1. **D3 must be inline** — `vendor/d3.v7.min.js` bundled directly in HTML output. No CDN allowed.
+2. **No SQLite** — JSON file storage for registry (`projects.json`).
+3. **Dual Mode Output** — Single scan generates both `business.html` and `developer.html`.

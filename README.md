@@ -1,208 +1,97 @@
-# apps-diagram
+# CodeMap
 
-CLI tools untuk visualisasi dan analisis source code.
+CLI Tool (Python 3.11) untuk memindai source code aplikasi (multi-framework) tanpa AI dan menghasilkan 2 mode visualisasi diagram HTML interaktif:
 
-## CodeMap — Corporate AI Source Scanner
+1. **💼 Mode Awam (Business Flow)**: Diagram tree horizontal yang mudah dipahami oleh Pengguna Awam / Business Analyst / Client, lengkap dengan pengelompokan menu utama, label bahasa Indonesia, aksi user, dan detail validasi/database.
+2. **⚡ Mode Developer (Developer Graph)**: Diagram force-directed interaktif untuk Developer yang menampilkan hubungan teknis lengkap antara route/endpoint API, controller, business logic, validasi, dan skema tabel database.
 
-Corporate AI Agent untuk memindai source code aplikasi. Dua mode operasi:
-
-### Mode Non-AI (scan)
-AST-based extraction — no AI required:
-- Endpoint API (method, path, file, line)
-- Validasi input (form/page validation rules)
-- Database relations (tables, columns, queries)
-- Controller & business logic detection
-- Import/dependency mapping
-- Output: JSON + Markdown
-
-### Mode AI (ai)
-LLM-powered documentation:
-- Natural language docs dari scan result
-- Arsitektur overview
-- Business flow explanation
-- Onboarding guide untuk developer baru
-- Output: Markdown (natural language)
-
-### Mode Diagram
-Interactive HTML/SVG diagram:
-- Click node → highlight connected edges + detail panel
-- Validation rules per node
-- Database relations view
-- Tab views (default, database, validation)
-- Pure SVG/HTML5 — no Mermaid.js
-- D3.js inline (offline-ready)
+Termasuk **Dashboard Project Registry** untuk mengelola dan membuka visualisasi berbagai project dalam satu tampilan terpusat.
 
 ---
 
-## Usage
+## 🚀 Fitur Utama
+
+- **Zero AI Required**: Scan cepat menggunakan AST parsing & regex extractor.
+- **Multi-Framework**:
+  - PHP / Laravel
+  - Vue 3 / Vue Router (SPA)
+  - JavaScript / Express.js
+  - Python / Flask & FastAPI
+  - Go / C# ASP.NET
+- **Dual-Mode Diagram Output**:
+  - `business.html` — Card-based horizontal tree, label bahasa Indonesia, awam-friendly.
+  - `developer.html` — D3 force-directed graph dengan detail relasi kode.
+- **Self-Contained & Offline-Ready**: D3.js v7 di-bundle langsung di dalam file HTML (Tanpa CDN / CORS issue).
+- **Project Registry & Dashboard**: Kelola multiple codebase dengan `codemap project` CLI dan dashboard HTML.
+
+---
+
+## 💻 Cara Penggunaan CLI
+
+### 1. Project Management & Dashboard
 
 ```bash
-cd ~/Documents/Projects/others/apps-diagram
+# Tambahkan project ke registry
+codemap project add cert26 /path/to/laravel-app --title "Certificate 26"
 
-# Scan only (JSON + Markdown)
-python3 -m codemap scan /path/to/project --languages js,ts,py --format both
+# Scan & buat diagram dual-mode untuk project
+codemap project scan cert26
 
-# Scan + AI docs (needs AI_API_URL + AI_API_KEY env vars)
-AI_API_URL="http://localhost:20128/v1/chat/completions" \
-AI_API_KEY="your-key" \
-python3 -m codemap ai /path/to/project --model "auto/fast"
+# Scan semua project terdaftar sekaligus
+codemap project scan-all
 
-# Scan + interactive diagram
-python3 -m codemap diagram /path/to/project --title "My App"
+# Buka Dashboard terpusat di browser
+codemap project dashboard
 
-# Full pipeline: scan → AI docs → diagram
-python3 -m codemap full /path/to/project --output myapp
+# Buka diagram spesifik project
+codemap project open cert26 --mode business
+codemap project open cert26 --mode developer
+
+# Lihat daftar project terdaftar
+codemap project list
 ```
 
-### Environment Variables
+### 2. Standalone Scan & Diagram Pipeline
 
-| Variable | Default | Description |
-|---|---|---|
-| `AI_API_URL` | — | LLM API endpoint (e.g. `http://localhost:20128/v1/chat/completions`) |
-| `AI_API_KEY` | — | API key for LLM service |
-| `AI_MODEL` | `auto/best-chat` | Model to use |
+```bash
+# Scan source code ke JSON / Markdown
+codemap scan /path/to/source -o scan.json -f json
 
-### CLI Options
+# Build diagram dari JSON (Dual Mode)
+codemap diagram --graph scan.json -o myapp -m both -t "My Application"
 
-```
-scan:
-  --languages    Comma-separated: js,ts,py,php,go,java,cs,rb,sh,sql  (default: all)
-  --exclude      Comma-separated patterns to skip (default: node_modules,.git,dist,build)
-  --format       json | markdown | both  (default: both)
-  --output       Output file path
-
-ai:
-  --scan-only    Use existing scan JSON instead of re-scanning
-  --context      Business context description (helps LLM generate better docs)
-  --model        Model ID (default: auto/best-chat)
-
-diagram:
-  --scan         Re-scan instead of using --graph
-  --graph        Use existing scan JSON / graph.json
-  --title        Diagram title
-
-full:
-  (combines scan + ai + diagram in one command)
+# Pipeline lengkap (Scan + Both Diagrams)
+codemap full /path/to/source -o myapp -t "My Application"
 ```
 
 ---
 
-## Output Files
+## 📁 Struktur Output Project
 
-| File | Description |
-|---|---|
-| `codemap.json` | Structured scan result (endpoints, validations, DB, logic) |
-| `codemap.md` | Markdown summary dari scan |
-| `codemap-ai.md` | Natural language docs dari LLM |
-| `codemap.html` | Interactive diagram |
-
----
-
-## Supported Languages
-
-| Language | Endpoints | Validation | DB Relations | Logic |
-|---|---|---|---|---|
-| JavaScript/TypeScript | ✅ | ✅ | ✅ | ✅ |
-| Python | ✅ | ✅ | ✅ | ✅ |
-| PHP | ✅ | ✅ | ✅ | ✅ |
-| Go | ✅ | ✅ | ✅ | ✅ |
-| Java | ✅ | ✅ | ✅ | ✅ |
-| C# | ✅ | ✅ | ✅ | ✅ |
-| Ruby | ✅ | ✅ | ✅ | ✅ |
-| Shell | ✅ | — | — | ✅ |
-| SQL | — | — | ✅ | — |
-
----
-
-## Architecture
+Setiap project yang discan via `codemap project scan <name>` disimpan di `~/.codemap/output/<name>/`:
 
 ```
-codemap/
-├── __init__.py       Version 1.0.0
-├── __main__.py       CLI entry, mode dispatch (scan/ai/diagram/full)
-├── scanner.py        AST extraction engine (endpoints, validations, DB, logic)
-├── ai.py             LLM documentation generator
-├── diagram.py        Interactive SVG/HTML diagram builder
-└── parsers/          Modular per-language parsers (extensible)
-```
-
-### Scanner Extractor Fields
-
-**Endpoints:**
-```json
-{
-  "method": "GET|POST|PUT|DELETE|PATCH",
-  "path": "/api/users/:id",
-  "file": "src/routes/users.js",
-  "line": 42,
-  "auth": "optional|required|none",
-  "validation": ["email", "min_length:8"]
-}
-```
-
-**Validations:**
-```json
-{
-  "rule": "email",
-  "field": "user_email",
-  "file": "src/forms/register.vue",
-  "line": 15,
-  "type": "format"
-}
-```
-
-**Database Relations:**
-```json
-{
-  "table": "users",
-  "columns": [{"name": "id", "type": "INT"}, {"name": "email", "type": "VARCHAR"}],
-  "query": "SELECT * FROM users WHERE id = ?",
-  "file": "src/models/user.js",
-  "line": 23
-}
+~/.codemap/
+├── projects.json         # File registry project
+├── dashboard.html        # Landing page dashboard
+└── output/
+    └── <name>/
+        ├── scan.json     # Data AST extraction
+        ├── business.html # Diagram Mode Awam (Business Flow)
+        └── developer.html# Diagram Mode Developer (Force Graph)
 ```
 
 ---
 
-## Test Results (mailcow-frontend)
+## 🛠️ Stack & Spesifikasi Teknikal
 
-```
-Files scanned:      40
-Endpoints found:     5
-Validations:        764
-Database queries:   14
-Business logic:     40
-Services:           4
-
-Diagram nodes:       119
-Diagram edges:       92
-Tab views:           3 (default, database, validation)
-```
+- **CLI Engine**: Python 3.11 (Standard Library, tanpa dependencies external python)
+- **Visualisasi**: D3.js v7 (Inlined 279KB)
+- **Data Persistence**: JSON (`~/.codemap/projects.json`)
+- **Compatibility**: macOS / Linux / Windows
 
 ---
 
-## Dependencies
+## 🤝 Lisensi
 
-- Python 3.9+
-- `d3.v7.min.js` — bundled inline in diagram output (no CDN needed)
-- LLM API optional (falls back to structured templates without it)
-
-No external Python packages required (stdlib only).
-
----
-
-## Other Tools
-
-### render.py — Force-Directed Graph
-Graphify scan output → D3 force-directed graph.
-```
-python3 render.py graph.json --title "App Graph" --output out.html
-```
-
-### flow.py — Flow/Dependency Graph
-Graphify scan output → layered DAG.
-```
-python3 flow.py graph.json --title "App Flow" --output out.html
-```
-
-Features: arrowheads (6 marker types), highlight path on select, collapse/expand, tree view.
+MIT License. Developed for fast code analysis and stakeholder presentation.

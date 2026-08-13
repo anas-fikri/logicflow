@@ -50,3 +50,16 @@
 - Lihat `next-tasks.md` untuk prioritas
 - `codemap project list` untuk status registry
 - `codemap project scan-all` untuk re-scan semua project
+## 2026-08-13T01:56:01Z
+- Status: COMPLETED
+- Objective: No objective recorded.
+- Summary: Documentation setup: ai-toolkit suite populated with audited data. 10 docs/ai/*.md files + ai-state.json. Scanner, diagram, AI, and project manager modules documented. 3 projects registered (cert26, passman, mailcow). Vue Router support + label sanitization + project registry CLI added.
+- Branch: main
+- Changed Files:
+- ?? .ai-toolkit/
+- ?? AGENTS.md
+- ?? catalyst-cert26-v4.html
+- ?? mailcow-v3.html
+- ?? mailcow-v4.html
+- ?? passman-v2.html
+- ?? passman-v4.html

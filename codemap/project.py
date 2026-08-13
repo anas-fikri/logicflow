@@ -2,16 +2,17 @@
 """CodeMap Project Manager — registry for managing multiple project scans & diagrams.
 
 Stores project metadata in ~/.codemap/projects.json
-Each project tracks: source path, scan JSON, diagram HTML, last scan date, stats.
+Each project tracks: source path, scan JSON, business diagram, developer diagram, last scan date, stats.
 
 Usage:
   codemap project add <name> <source-path> [--title TITLE]
   codemap project list
-  codemap project scan <name>           # re-scan + regenerate diagram
-  codemap project diagram <name>        # regenerate diagram from existing scan
+  codemap project scan <name>           # re-scan + generate business & dev diagrams
+  codemap project diagram <name>        # regenerate diagrams from existing scan
   codemap project info <name>           # show project details
   codemap project remove <name>
-  codemap project open <name>           # open diagram in browser
+  codemap project open <name> [--mode business|developer]
+  codemap project dashboard             # open unified dashboard in browser
   codemap project scan-all              # re-scan all projects
 """
 
@@ -19,13 +20,13 @@ import json
 import os
 import sys
 import subprocess
-import time
 from pathlib import Path
 from datetime import datetime
 
 REGISTRY_DIR = Path.home() / ".codemap"
 REGISTRY_FILE = REGISTRY_DIR / "projects.json"
 OUTPUT_DIR = REGISTRY_DIR / "output"
+DASHBOARD_FILE = REGISTRY_DIR / "dashboard.html"
 
 
 def _load_registry():
@@ -40,6 +41,18 @@ def _save_registry(reg):
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     with open(REGISTRY_FILE, "w") as f:
         json.dump(reg, f, indent=2, ensure_ascii=False)
+    _generate_dashboard(reg)
+
+
+def _generate_dashboard(reg):
+    """Generate global dashboard.html."""
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from codemap.dashboard import DashboardBuilder
+
+    builder = DashboardBuilder()
+    html = builder.build(reg)
+    with open(DASHBOARD_FILE, "w") as f:
+        f.write(html)
 
 
 def _project_dir(name):
@@ -70,7 +83,8 @@ def cmd_project_add(args):
         "source": source,
         "title": title,
         "scan_file": None,
-        "diagram_file": None,
+        "business_diagram": None,
+        "developer_diagram": None,
         "last_scan": None,
         "stats": None,
         "created": datetime.now().isoformat(),
@@ -80,7 +94,7 @@ def cmd_project_add(args):
     print(f"Project '{name}' added.")
     print(f"  Source: {source}")
     print(f"  Title:  {title}")
-    print(f"  Run 'codemap project scan {name}' to generate scan + diagram.")
+    print(f"  Run 'codemap project scan {name}' to generate dual-mode diagrams.")
 
 
 def cmd_project_list(args):
@@ -91,8 +105,8 @@ def cmd_project_list(args):
         print("No projects registered. Use 'codemap project add <name> <path>' to add one.")
         return
 
-    print(f"{'Name':<20} {'Title':<25} {'Menus':>5} {'APIs':>5} {'Nodes':>6} {'Last Scan':<20}")
-    print("-" * 85)
+    print(f"{'Name':<18} {'Title':<22} {'Menus':>5} {'APIs':>5} {'Nodes':>6} {'Last Scan':<19}")
+    print("-" * 80)
     for name, p in sorted(projects.items()):
         stats = p.get("stats") or {}
         last = p.get("last_scan", "—")
@@ -101,11 +115,11 @@ def cmd_project_list(args):
         menus = stats.get("menus", "—")
         apis = stats.get("apis", "—")
         nodes = stats.get("nodes", "—")
-        print(f"{name:<20} {p.get('title','—'):<25} {str(menus):>5} {str(apis):>5} {str(nodes):>6} {last:<20}")
+        print(f"{name:<18} {p.get('title','—'):<22} {str(menus):>5} {str(apis):>5} {str(nodes):>6} {last:<19}")
 
 
 def cmd_project_scan(args):
-    """Re-scan project source and regenerate diagram."""
+    """Re-scan project source and regenerate dual-mode diagrams."""
     reg = _load_registry()
     name = args.name
     if name not in reg["projects"]:
@@ -117,9 +131,9 @@ def cmd_project_scan(args):
     exclude = p.get("exclude", ["node_modules", ".git", "vendor", "dist"])
     d = _ensure_project_dir(name)
     scan_file = str(d / "scan.json")
-    diagram_file = str(d / "diagram.html")
+    biz_file = str(d / "business.html")
+    dev_file = str(d / "developer.html")
 
-    # Import scanner + diagram builder
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from codemap.scanner import CodeScanner
     from codemap.diagram import DiagramBuilder
@@ -131,13 +145,18 @@ def cmd_project_scan(args):
     with open(scan_file, "w") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
 
-    print(f"  Scan: {scan_file} ({os.path.getsize(scan_file)} bytes)")
+    print(f"  Scan JSON:   {scan_file} ({os.path.getsize(scan_file)} bytes)")
 
     builder = DiagramBuilder()
-    html = builder.build(result, title=p.get("title", name))
-    with open(diagram_file, "w") as f:
-        f.write(html)
-    print(f"  Diagram: {diagram_file} ({os.path.getsize(diagram_file)} bytes)")
+    biz_html, dev_html = builder.build_both(result, title=p.get("title", name))
+
+    with open(biz_file, "w") as f:
+        f.write(biz_html)
+    print(f"  Business:    {biz_file} ({os.path.getsize(biz_file)} bytes)")
+
+    with open(dev_file, "w") as f:
+        f.write(dev_html)
+    print(f"  Developer:   {dev_file} ({os.path.getsize(dev_file)} bytes)")
 
     # Update stats
     eps = result.get("endpoints", [])
@@ -149,16 +168,14 @@ def cmd_project_scan(args):
             menus.add(parts[0])
 
     reg["projects"][name]["scan_file"] = scan_file
-    reg["projects"][name]["diagram_file"] = diagram_file
+    reg["projects"][name]["business_diagram"] = biz_file
+    reg["projects"][name]["developer_diagram"] = dev_file
     reg["projects"][name]["last_scan"] = datetime.now().isoformat()
     reg["projects"][name]["stats"] = {
         "endpoints": len(eps),
         "menus": len(menus),
         "apis": len(eps),
-        "nodes": len(result.get("nodes", [])) if "nodes" in result else (
-            len(eps) + len(result.get("business_logic", [])) +
-            len(result.get("validations", [])) + len(result.get("forms", [])) + 1
-        ),
+        "nodes": len(eps) + len(result.get("business_logic", [])) + len(result.get("validations", [])) + 1,
         "validations": len(result.get("validations", [])),
         "bizlogic": len(result.get("business_logic", [])),
         "languages": list(set(ep.get("language", "") for ep in eps)) if eps else [],
@@ -170,7 +187,7 @@ def cmd_project_scan(args):
 
 
 def cmd_project_diagram(args):
-    """Regenerate diagram from existing scan (no re-scan)."""
+    """Regenerate diagrams from existing scan JSON."""
     reg = _load_registry()
     name = args.name
     if name not in reg["projects"]:
@@ -190,15 +207,23 @@ def cmd_project_diagram(args):
         result = json.load(f)
 
     d = _project_dir(name)
-    diagram_file = str(d / "diagram.html")
-    builder = DiagramBuilder()
-    html = builder.build(result, title=p.get("title", name))
-    with open(diagram_file, "w") as f:
-        f.write(html)
+    biz_file = str(d / "business.html")
+    dev_file = str(d / "developer.html")
 
-    reg["projects"][name]["diagram_file"] = diagram_file
+    builder = DiagramBuilder()
+    biz_html, dev_html = builder.build_both(result, title=p.get("title", name))
+
+    with open(biz_file, "w") as f:
+        f.write(biz_html)
+    with open(dev_file, "w") as f:
+        f.write(dev_html)
+
+    reg["projects"][name]["business_diagram"] = biz_file
+    reg["projects"][name]["developer_diagram"] = dev_file
     _save_registry(reg)
-    print(f"Diagram regenerated: {diagram_file} ({os.path.getsize(diagram_file)} bytes)")
+    print(f"Diagrams regenerated:")
+    print(f"  Business:  {biz_file}")
+    print(f"  Developer: {dev_file}")
 
 
 def cmd_project_info(args):
@@ -214,43 +239,33 @@ def cmd_project_info(args):
     print(f"  Title:       {p.get('title', '—')}")
     print(f"  Source:      {p.get('source', '—')}")
     print(f"  Scan file:   {p.get('scan_file', '—')}")
-    print(f"  Diagram:     {p.get('diagram_file', '—')}")
+    print(f"  Business:    {p.get('business_diagram', '—')}")
+    print(f"  Developer:   {p.get('developer_diagram', '—')}")
     print(f"  Last scan:   {p.get('last_scan', '—')}")
-    print(f"  Created:     {p.get('created', '—')}")
     stats = p.get("stats")
     if stats:
-        print(f"  Stats:")
-        print(f"    Nodes:       {stats.get('nodes', '—')}")
-        print(f"    Menus:       {stats.get('menus', '—')}")
-        print(f"    APIs:        {stats.get('apis', '—')}")
-        print(f"    Validations: {stats.get('validations', '—')}")
-        print(f"    Biz logic:   {stats.get('bizlogic', '—')}")
-        print(f"    Languages:   {', '.join(stats.get('languages', [])) or '—'}")
+        print(f"  Stats: {stats.get('nodes')} nodes, {stats.get('menus')} menus, {stats.get('apis')} APIs")
 
 
 def cmd_project_remove(args):
-    """Remove a project from registry (and optionally its files)."""
+    """Remove project from registry."""
     reg = _load_registry()
     name = args.name
     if name not in reg["projects"]:
         print(f"Error: project '{name}' not found.")
         sys.exit(1)
 
-    p = reg["projects"][name]
     del reg["projects"][name]
     _save_registry(reg)
 
-    # Optionally delete files
     if args.purge:
         d = _project_dir(name)
         if d.exists():
             import shutil
             shutil.rmtree(d)
             print(f"Project '{name}' removed + files purged.")
-        else:
-            print(f"Project '{name}' removed.")
     else:
-        print(f"Project '{name}' removed from registry. Files kept at {OUTPUT_DIR / name}")
+        print(f"Project '{name}' removed from registry.")
 
 
 def cmd_project_open(args):
@@ -261,14 +276,31 @@ def cmd_project_open(args):
         print(f"Error: project '{name}' not found.")
         sys.exit(1)
 
-    diagram_file = reg["projects"][name].get("diagram_file")
-    if not diagram_file or not os.path.isfile(diagram_file):
-        print(f"Error: no diagram for project '{name}'. Run 'codemap project scan {name}' first.")
+    p = reg["projects"][name]
+    mode = getattr(args, "mode", "business") or "business"
+    target_key = "business_diagram" if mode == "business" else "developer_diagram"
+    file_path = p.get(target_key) or p.get("diagram_file")
+
+    if not file_path or not os.path.isfile(file_path):
+        print(f"Error: no {mode} diagram for '{name}'. Run 'codemap project scan {name}' first.")
         sys.exit(1)
 
-    # Convert to file:// URL
-    url = f"file://{os.path.abspath(diagram_file)}"
-    print(f"Opening: {url}")
+    url = f"file://{os.path.abspath(file_path)}"
+    print(f"Opening {mode} diagram: {url}")
+    subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def cmd_project_dashboard(args):
+    """Open unified dashboard in browser."""
+    reg = _load_registry()
+    _generate_dashboard(reg)
+
+    if not DASHBOARD_FILE.exists():
+        print("Error: failed to generate dashboard.")
+        sys.exit(1)
+
+    url = f"file://{os.path.abspath(DASHBOARD_FILE)}"
+    print(f"Opening Dashboard: {url}")
     subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
@@ -285,7 +317,6 @@ def cmd_project_scan_all(args):
     for i, name in enumerate(sorted(projects), 1):
         print(f"\n[{i}/{total}] Scanning {name} ...")
         try:
-            # Create a dummy args object
             class DummyArgs:
                 pass
             dummy = DummyArgs()
@@ -300,7 +331,7 @@ def cmd_project_scan_all(args):
 
 def setup_project_subparser(sub):
     """Add 'project' subcommand to argparse."""
-    sp = sub.add_parser("project", help="Manage multiple projects (registry)")
+    sp = sub.add_parser("project", help="Manage multiple projects (registry & dashboard)")
     sub_p = sp.add_subparsers(dest="project_command", required=True)
 
     # add
@@ -317,12 +348,12 @@ def setup_project_subparser(sub):
     p.set_defaults(func=cmd_project_list)
 
     # scan
-    p = sub_p.add_parser("scan", help="Re-scan project + regenerate diagram")
+    p = sub_p.add_parser("scan", help="Re-scan project + regenerate dual diagrams")
     p.add_argument("name", help="Project name")
     p.set_defaults(func=cmd_project_scan)
 
     # diagram
-    p = sub_p.add_parser("diagram", help="Regenerate diagram from existing scan")
+    p = sub_p.add_parser("diagram", help="Regenerate diagrams from existing scan")
     p.add_argument("name", help="Project name")
     p.set_defaults(func=cmd_project_diagram)
 
@@ -334,13 +365,18 @@ def setup_project_subparser(sub):
     # remove
     p = sub_p.add_parser("remove", help="Remove project from registry")
     p.add_argument("name", help="Project name")
-    p.add_argument("--purge", action="store_true", help="Also delete scan + diagram files")
+    p.add_argument("--purge", action="store_true", help="Also delete scan & diagram files")
     p.set_defaults(func=cmd_project_remove)
 
     # open
     p = sub_p.add_parser("open", help="Open diagram in browser")
     p.add_argument("name", help="Project name")
+    p.add_argument("-m", "--mode", choices=["business", "developer"], default="business", help="Diagram mode to open")
     p.set_defaults(func=cmd_project_open)
+
+    # dashboard
+    p = sub_p.add_parser("dashboard", help="Open unified project dashboard")
+    p.set_defaults(func=cmd_project_dashboard)
 
     # scan-all
     p = sub_p.add_parser("scan-all", help="Re-scan all registered projects")
