@@ -279,16 +279,54 @@ function _nodeKey(d) {
   return d && d.data ? (d.depth + ':' + d.data.name + ':' + (d.data.path||'')) : null;
 }
 
+const BUSINESS_STAGES = [
+  { id: 'stage_0', step: 'Langkah 0', name: '🔑 0. Autentikasi & Akun', order: 0, match: p => /^(auth|login|logout|password|me|register)/i.test(p) },
+  { id: 'stage_1', step: 'Langkah 1', name: '🏢 1. Data Master & Syarat Utama', order: 1, match: p => /^(templates|institutions|participants|master|categories|products|customers|suppliers)/i.test(p) },
+  { id: 'stage_2', step: 'Langkah 2', name: '📅 2. Operasional Pelatihan', order: 2, match: p => /^(events|rundowns|orders|transactions|schedules|bookings|tasks)/i.test(p) },
+  { id: 'stage_3', step: 'Langkah 3', name: '🎓 3. Penerbitan & Distribusi Sertifikat', order: 3, match: p => /^(certificates|invoices|payments|deliveries|bulk|issue|send|pdf|export|reports)/i.test(p) },
+  { id: 'stage_4', step: 'Langkah 4', name: '🔍 4. Verifikasi & Publik', order: 4, match: p => /^(verify|health|media|public)/i.test(p) },
+  { id: 'stage_5', step: 'Langkah 5', name: '⚙️ 5. Pengaturan & Admin', order: 5, match: p => /^(settings|users|dashboard|admin)/i.test(p) }
+];
+
+function getStageForMenu(menuKey, path) {
+  const p = (menuKey || path || '').toLowerCase();
+  for (const st of BUSINESS_STAGES) {
+    if (st.match(p)) return st;
+  }
+  return BUSINESS_STAGES[2]; // Default to Operasional
+}
+
 function buildTree() {
   const appTitle = document.title.split(' — ')[0] || 'App';
   const root = { name: appTitle, type: 'root', children: [] };
-  const menus = {};
+  
+  // Stages map
+  const stageNodes = {};
+  BUSINESS_STAGES.forEach(st => {
+    stageNodes[st.id] = {
+      name: st.name,
+      type: 'menu',
+      isStage: true,
+      stageId: st.id,
+      order: st.order,
+      children: []
+    };
+  });
+
+  const menusMap = {};
 
   asArr(SCAN.endpoints).forEach(ep => {
     const mname = menuName(ep.path);
-    if (!menus[mname]) {
-      menus[mname] = { name: humanLabel(mname), type: 'menu', menuKey: mname, children: [] };
-      root.children.push(menus[mname]);
+    const stage = getStageForMenu(mname, ep.path);
+
+    if (!menusMap[mname]) {
+      menusMap[mname] = {
+        name: humanLabel(mname),
+        type: 'menu',
+        menuKey: mname,
+        children: []
+      };
+      stageNodes[stage.id].children.push(menusMap[mname]);
     }
 
     const feature = {
@@ -335,14 +373,20 @@ function buildTree() {
     });
 
     if (feature.children.length === 0) delete feature.children;
-    menus[mname].children.push(feature);
+    menusMap[mname].children.push(feature);
   });
 
-  // Sort menus
-  root.children.sort((a, b) => a.name.localeCompare(b.name));
+  // Attach non-empty stages to root in order
+  BUSINESS_STAGES.forEach(st => {
+    const stageObj = stageNodes[st.id];
+    if (stageObj.children.length > 0) {
+      stageObj.children.sort((a, b) => a.name.localeCompare(b.name));
+      root.children.push(stageObj);
+    }
+  });
 
   treeRoot = d3.hierarchy(root);
-  // Auto collapse depth > 1
+  // Auto collapse depth > 1 (keep stages expanded, collapse individual menus)
   treeRoot.descendants().forEach(d => {
     if (d.depth > 1 && d.children) {
       d._children = d.children;
@@ -541,13 +585,48 @@ function selectNode(d) {
   }
   if (data.type === 'menu') {
     const children = (d.children || d._children || []);
-    html += `<div class="section"><h4>Fitur Dalam Menu Ini (${children.length})</h4>`;
+    html += `<div class="section"><h4>Fitur Dalam Modul Ini (${children.length})</h4>`;
     children.forEach(c => {
       const k = _nodeKey(c);
       const safeName = (c.data.name || '').replace(/'/g, "\\'");
       html += `<div class="item-link" onclick="focusNodeByKey('${k}')">🔹 ${safeName}</div>`;
     });
     html += '</div>';
+  }
+
+  // ── Prerequisite Warning Section ──
+  const pathLower = (data.path || '').toLowerCase();
+  const fileLower = (data.file || '').toLowerCase();
+  
+  // Check explicit SCAN.prerequisites
+  const reqPrereqs = (SCAN.prerequisites || []).filter(p => {
+    if (!p.file) return false;
+    const pf = p.file.toLowerCase();
+    return (fileLower && pf === fileLower) || (pathLower && pf.includes(menuName(pathLower)));
+  });
+
+  // Infer prerequisite dependencies
+  const prereqItems = [];
+  if (pathLower.includes('event') || fileLower.includes('event')) {
+    prereqItems.push('🏢 <b>Template Sertifikat</b> (Format & Desain Sertifikat harus sudah dibuat di Langkah 1)');
+    prereqItems.push('🏛️ <b>Institusi / Perusahaan</b> (Opsional: Data penyelenggara pelatihan)');
+  }
+  if (pathLower.includes('certificate') || pathLower.includes('issue')) {
+    prereqItems.push('📅 <b>Event Pelatihan & Peserta</b> (Harus ada Event Aktif dengan Peserta Berstatus Hadir)');
+    prereqItems.push('🎨 <b>Template Sertifikat Aktif</b> (Template tidak boleh berstatus draft)');
+  }
+  reqPrereqs.forEach(rp => {
+    const tableClean = rp.prerequisite_table.replace(/_/g, ' ').toUpperCase();
+    prereqItems.push(`🔗 <b>Tabel Ref ${tableClean}</b> (Field <code>${rp.field}</code> wajib merujuk ke record yang sudah ada)`);
+  });
+
+  if (prereqItems.length > 0) {
+    html += `<div class="section" style="background:#2d1b00;border-left:3px solid #d29922;margin:8px 0;padding:10px 12px;border-radius:4px;">`;
+    html += `<h4 style="color:#f2cc60;margin-bottom:6px;">⚠️ PRASYARAT & SYARAT UTAMA (PREREQUISITES)</h4>`;
+    html += `<div style="font-size:11px;color:#e6edf3;line-height:1.5;">Langkah ini membutuhkan data berikut yang harus disiapkan di tahap sebelumnya:</div>`;
+    html += `<ul style="margin-top:6px;padding-left:16px;font-size:11px;color:#d29922;">`;
+    prereqItems.forEach(pi => html += `<li style="margin:3px 0;">${pi}</li>`);
+    html += `</ul></div>`;
   }
 
   // ── Smart Validation & Field Matching ──

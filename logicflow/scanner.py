@@ -243,6 +243,7 @@ class CodeScanner:
             "forms": [],
             "business_logic": [],
             "services": [],
+            "prerequisites": [],
             "files": [],
             "summary": {},
         }
@@ -458,6 +459,70 @@ class CodeScanner:
 
     def _scan_php(self, content, rel):
         """Scan PHP: routes, DB, validation."""
+        # Track controllers
+        if "Controllers" in rel and "class " in content:
+            class_match = re.search(r"class\s+(\w+Controller)", content)
+            if class_match:
+                ctrl_name = class_match.group(1)
+                methods = re.findall(r"public\s+function\s+(\w+)\s*\(", content)
+                self.result["controllers"].append({
+                    "id": self._node_id(),
+                    "file": rel,
+                    "name": ctrl_name,
+                    "methods": methods,
+                })
+
+        # Laravel Route scanning with prefix & apiResource expansion
+        if "routes/" in rel or "Route::" in content:
+            # Detect active prefix if present
+            prefix_match = re.search(r"Route::prefix\s*\(\s*['\"]([^'\"]+)['\"]\s*\)", content)
+            path_prefix = (prefix_match.group(1).strip('/') + '/') if prefix_match else ""
+            
+            # 1. Expand apiResource / resource
+            for res_match in re.finditer(r"Route::(?:apiResource|resource)\s*\(\s*['\"]([^'\"]+)['\"]\s*,\s*([^,\)]+)", content):
+                res_name = res_match.group(1).strip('/')
+                ctrl_raw = res_match.group(2).strip()
+                ctrl_name = ctrl_raw.split('\\')[-1].replace('::class', '').strip('\'" ')
+                full_base = f"{path_prefix}{res_name}".strip('/')
+                
+                # Standard 5 API Resource routes
+                resource_routes = [
+                    ("get", full_base, "index"),
+                    ("post", full_base, "store"),
+                    ("get", f"{full_base}/{{{res_name.rstrip('s')}}}", "show"),
+                    ("put", f"{full_base}/{{{res_name.rstrip('s')}}}", "update"),
+                    ("delete", f"{full_base}/{{{res_name.rstrip('s')}}}", "destroy"),
+                ]
+                for m, p, act in resource_routes:
+                    self.result["endpoints"].append({
+                        "id": self._node_id(),
+                        "file": rel,
+                        "line": content[:res_match.start()].count("\n") + 1,
+                        "method": m.lower(),
+                        "path": p,
+                        "controller": ctrl_name,
+                        "action": act,
+                        "type": "laravel",
+                    })
+
+            # 2. Detailed Controller-linked routes [Controller::class, 'method']
+            ctrl_route_pattern = r"Route::(get|post|put|patch|delete|options|head|any)\s*\(\s*['\"]([^'\"]+)['\"]\s*,\s*\[?\s*\\?([\w\\]+)::class\s*,\s*['\"](\w+)['\"]"
+            for c_match in re.finditer(ctrl_route_pattern, content):
+                method, subpath, ctrl_cls, act = c_match.groups()
+                subpath_clean = subpath.strip('/')
+                full_path = f"{path_prefix}{subpath_clean}".strip('/') if not subpath_clean.startswith(path_prefix) else subpath_clean
+                ctrl_name = ctrl_cls.split('\\')[-1]
+                self.result["endpoints"].append({
+                    "id": self._node_id(),
+                    "file": rel,
+                    "line": content[:c_match.start()].count("\n") + 1,
+                    "method": method.lower(),
+                    "path": full_path,
+                    "controller": ctrl_name,
+                    "action": act,
+                    "type": "laravel",
+                })
+
         for pattern, ptype in ROUTE_PATTERNS["php"]:
             for match in re.finditer(pattern, content, re.IGNORECASE):
                 groups = match.groups()
@@ -465,6 +530,9 @@ class CodeScanner:
                     continue
                 method = (groups[0] or "").lower()
                 path = groups[1] if len(groups) > 1 else ""
+                # Skip if already captured
+                if any(e["path"] == path and e["method"] == method for e in self.result["endpoints"]):
+                    continue
                 if path or method:
                     self.result["endpoints"].append({
                         "id": self._node_id(),
@@ -491,18 +559,30 @@ class CodeScanner:
         self._extract_validators(content, rel, "php", PHP_VALIDATORS)
         self._extract_business_functions(content, rel, "php")
 
-        # Laravel $request->validate / FormRequest rules array parsing
-        for val_match in re.finditer(r"['\"](\w+)['\"]\s*=>\s*['\"]([^'\"]+)['\"]", content):
-            field, rule = val_match.groups()
-            if any(kw in rule.lower() for kw in ["required", "nullable", "string", "min", "max", "email", "integer", "numeric", "boolean", "array", "date", "in:", "exists", "unique", "sometimes"]):
-                self.result["validations"].append({
-                    "id": self._node_id(),
-                    "file": rel,
-                    "line": content[:val_match.start()].count("\n") + 1,
-                    "field": field,
-                    "rule": rule,
-                    "kind": "laravel_validation",
-                })
+        # Filter out seeders & migrations from form validations (to prevent dummy data noise)
+        is_seeder_or_migration = any(k in rel.lower() for k in ["seeder", "migration", "database/"])
+        if not is_seeder_or_migration:
+            for val_match in re.finditer(r"['\"](\w+)['\"]\s*=>\s*['\"]([^'\"]+)['\"]", content):
+                field, rule = val_match.groups()
+                if any(kw in rule.lower() for kw in ["required", "nullable", "string", "min", "max", "email", "integer", "numeric", "boolean", "array", "date", "in:", "exists", "unique", "sometimes"]):
+                    self.result["validations"].append({
+                        "id": self._node_id(),
+                        "file": rel,
+                        "line": content[:val_match.start()].count("\n") + 1,
+                        "field": field,
+                        "rule": rule,
+                        "kind": "laravel_validation",
+                    })
+                    
+                    # Detect prerequisite constraint (e.g., exists:certificate_templates,id)
+                    fk_match = re.search(r"exists:([a-zA-Z0-9_]+)", rule)
+                    if fk_match:
+                        ref_table = fk_match.group(1)
+                        self.result["prerequisites"].append({
+                            "file": rel,
+                            "field": field,
+                            "prerequisite_table": ref_table,
+                        })
 
     def _scan_cs(self, content, rel):
         for pattern, ptype in ROUTE_PATTERNS["csharp"]:
