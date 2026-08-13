@@ -458,7 +458,7 @@ function selectNode(d) {
     html += `<div class="section"><h4>HTTP Method & Path</h4><div class="row"><span class="tag method-${data.method.toLowerCase()}">${data.method}</span> <code>${data.path}</code></div></div>`;
   }
   if (data.file) {
-    html += `<div class="section"><h4>Source File</h4><div class="row"><code>${data.file}</code></div></div>`;
+    html += `<div class="section"><h4>Source File</h4><div class="row"><code>${data.file}${data.line ? ':'+data.line : ''}</code></div></div>`;
   }
   if (data.type === 'menu') {
     const children = (d.children || d._children || []);
@@ -477,6 +477,55 @@ function selectNode(d) {
       html += `<div class="row"><code>${col.name}</code> <span style="color:#8b949e">(${col.type})</span></div>`;
     });
     html += '</div>';
+  }
+
+  // ── Field & Validasi Input ──
+  const relatedValidations = (SCAN.validations || []).filter(v =>
+    (data.file && v.file === data.file) ||
+    (d.children || d._children || []).some(c => c.data.field && c.data.field === v.field)
+  );
+  const relatedForms = (SCAN.forms || []).filter(f => data.file && f.file === data.file);
+
+  // Build merged field list: validations + forms
+  const fieldMap = {};
+  relatedValidations.forEach(v => {
+    const key = v.field || v.rule || '?';
+    if (!fieldMap[key]) fieldMap[key] = { field: key, rules: [], sources: [] };
+    fieldMap[key].rules.push(v.rule || '');
+    fieldMap[key].sources.push('validation');
+  });
+  relatedForms.forEach(f => {
+    const key = f.field || f.name || '?';
+    if (!fieldMap[key]) fieldMap[key] = { field: key, rules: [], sources: [] };
+    if (!fieldMap[key].sources.includes('form')) fieldMap[key].sources.push('form');
+    if (f.type) fieldMap[key].formType = f.type;
+  });
+
+  const fieldEntries = Object.values(fieldMap);
+  if (fieldEntries.length > 0) {
+    html += `<div class="section"><h4>📋 Field & Validasi Input (${fieldEntries.length})</h4>`;
+    html += `<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:11px;">`;
+    html += `<thead><tr style="border-bottom:1px solid #30363d;color:#8b949e;">`;
+    html += `<th style="padding:4px 6px;text-align:left;font-weight:500;">Field</th>`;
+    html += `<th style="padding:4px 6px;text-align:left;font-weight:500;">Status</th>`;
+    html += `<th style="padding:4px 6px;text-align:left;font-weight:500;">Aturan Validasi</th>`;
+    html += `</tr></thead><tbody>`;
+    fieldEntries.forEach(fe => {
+      const rules = fe.rules.join(' | ');
+      const isMandatory = /required|not.?null|min_length|minLength|\bmin\b/.test(rules);
+      const statusBadge = isMandatory
+        ? `<span style="background:#da363322;color:#f85149;border:1px solid #da363366;padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px;">WAJIB</span>`
+        : `<span style="background:#30363d;color:#8b949e;padding:1px 6px;border-radius:4px;font-size:10px;">OPSIONAL</span>`;
+      const ruleDisplay = rules
+        ? `<code style="font-size:10px;word-break:break-all;">${rules}</code>`
+        : `<span style="color:#484f58">—</span>`;
+      html += `<tr style="border-bottom:1px solid #21262d;">`;
+      html += `<td style="padding:4px 6px;"><code style="font-size:11px;">${fe.field}</code></td>`;
+      html += `<td style="padding:4px 6px;">${statusBadge}</td>`;
+      html += `<td style="padding:4px 6px;">${ruleDisplay}</td>`;
+      html += `</tr>`;
+    });
+    html += `</tbody></table></div>`;
   }
 
   body.innerHTML = html;
@@ -898,12 +947,60 @@ function selectDevNode(d) {
   document.getElementById('detail-title').textContent = d.label;
 
   const body = document.getElementById('detail-body');
-  let html = `<div class="section"><h4>Kind</h4><code>${d.kind}</code></div>`;
+  let html = '';
+
+  // Method + Path (for endpoint nodes)
+  if (d.method) {
+    html += `<div class="section"><h4>HTTP Method & Path</h4><div style="padding:2px 0"><span class="tag method-${(d.method||'').toLowerCase()}">${d.method}</span> <code>${d.path||''}</code></div></div>`;
+  }
+  html += `<div class="section"><h4>Kind</h4><code>${d.kind}</code></div>`;
   if (d.file) html += `<div class="section"><h4>File</h4><code>${d.file}:${d.line || 1}</code></div>`;
-  if (d.columns) {
-    html += `<div class="section"><h4>Schema Kolom</h4>`;
-    d.columns.forEach(c => html += `<div style="padding:2px 0"><code>${c.name}</code> (${c.type})</div>`);
+  if (d.columns && d.columns.length > 0) {
+    html += `<div class="section"><h4>Schema Kolom (${d.columns.length})</h4>`;
+    d.columns.forEach(c => html += `<div style="padding:2px 0"><code>${c.name}</code> <span style="color:#8b949e">(${c.type})</span>${c.nullable===false?' <span style="color:#f85149;font-size:10px;">NOT NULL</span>':''}</div>`);
     html += '</div>';
+  }
+  if (d.rule) {
+    html += `<div class="section"><h4>Rule Validasi</h4><div style="padding:2px 0">Field: <code>${d.field||'—'}</code></div><div style="padding:2px 0">Rule: <code>${d.rule}</code></div></div>`;
+  }
+
+  // ── Field & Validasi Input terkait file ini ──
+  const devRelatedValidations = (SCAN.validations || []).filter(v => d.file && v.file === d.file);
+  const devRelatedForms = (SCAN.forms || []).filter(f => d.file && f.file === d.file);
+  const devFieldMap = {};
+  devRelatedValidations.forEach(v => {
+    const key = v.field || v.rule || '?';
+    if (!devFieldMap[key]) devFieldMap[key] = { field: key, rules: [] };
+    devFieldMap[key].rules.push(v.rule || '');
+  });
+  devRelatedForms.forEach(f => {
+    const key = f.field || f.name || '?';
+    if (!devFieldMap[key]) devFieldMap[key] = { field: key, rules: [] };
+    if (f.type && !devFieldMap[key].formType) devFieldMap[key].formType = f.type;
+  });
+  const devFieldEntries = Object.values(devFieldMap);
+  if (devFieldEntries.length > 0) {
+    html += `<div class="section"><h4>📋 Field & Validasi (${devFieldEntries.length})</h4>`;
+    html += `<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:11px;">`;
+    html += `<thead><tr style="border-bottom:1px solid #30363d;color:#8b949e;">`;
+    html += `<th style="padding:4px 6px;text-align:left;font-weight:500;">Field</th>`;
+    html += `<th style="padding:4px 6px;text-align:left;font-weight:500;">Status</th>`;
+    html += `<th style="padding:4px 6px;text-align:left;font-weight:500;">Rule</th>`;
+    html += `</tr></thead><tbody>`;
+    devFieldEntries.forEach(fe => {
+      const rules = fe.rules.join(' | ');
+      const isMandatory = /required|not.?null|min_length|minLength|\bmin\b/.test(rules);
+      const statusBadge = isMandatory
+        ? `<span style="background:#da363322;color:#f85149;border:1px solid #da363366;padding:1px 6px;border-radius:4px;font-weight:600;font-size:10px;">WAJIB</span>`
+        : `<span style="background:#30363d;color:#8b949e;padding:1px 6px;border-radius:4px;font-size:10px;">OPSIONAL</span>`;
+      const ruleDisplay = rules ? `<code style="font-size:10px;word-break:break-all;">${rules}</code>` : `<span style="color:#484f58">—</span>`;
+      html += `<tr style="border-bottom:1px solid #21262d;">`;
+      html += `<td style="padding:4px 6px;"><code>${fe.field}</code></td>`;
+      html += `<td style="padding:4px 6px;">${statusBadge}</td>`;
+      html += `<td style="padding:4px 6px;">${ruleDisplay}</td>`;
+      html += `</tr>`;
+    });
+    html += `</tbody></table></div>`;
   }
 
   body.innerHTML = html;
@@ -952,10 +1049,7 @@ function filterGraph(q) {
     const item = document.createElement('div');
     item.className = 'node-item';
     item.innerHTML = `<span>${n.label}</span><span class="kind kind-${n.kind}">${n.kind}</span>`;
-    item.onclick = () => {
-      selectDevNode(n);
-      centerDevNode(n);
-    };
+    item.onclick = () => selectDevNode(n);
     list.appendChild(item);
   });
 }
