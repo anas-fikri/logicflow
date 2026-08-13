@@ -277,17 +277,30 @@ def cmd_project_open(args):
         sys.exit(1)
 
     p = reg["projects"][name]
-    mode = getattr(args, "mode", "business") or "business"
-    target_key = "business_diagram" if mode == "business" else "developer_diagram"
-    file_path = p.get(target_key) or p.get("diagram_file")
+    mode = getattr(args, "mode", "both") or "both"
 
-    if not file_path or not os.path.isfile(file_path):
-        print(f"Error: no {mode} diagram for '{name}'. Run 'codemap project scan {name}' first.")
-        sys.exit(1)
+    if mode == "both":
+        biz_path = p.get("business_diagram")
+        dev_path = p.get("developer_diagram")
+        if not biz_path or not os.path.isfile(biz_path):
+            print(f"Error: diagrams for '{name}' not found. Run 'codemap project scan {name}' first.")
+            sys.exit(1)
+        url_biz = f"file://{os.path.abspath(biz_path)}"
+        url_dev = f"file://{os.path.abspath(dev_path)}"
+        print(f"Opening Dual-Mode Diagrams for '{name}':")
+        print(f"  💼 Mode Awam (Business): {url_biz}")
+        print(f"  ⚡ Mode Developer Graph: {url_dev}")
+        subprocess.Popen(["open", url_biz], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        target_key = "business_diagram" if mode == "business" else "developer_diagram"
+        file_path = p.get(target_key)
+        if not file_path or not os.path.isfile(file_path):
+            print(f"Error: no {mode} diagram for '{name}'. Run 'codemap project scan {name}' first.")
+            sys.exit(1)
 
-    url = f"file://{os.path.abspath(file_path)}"
-    print(f"Opening {mode} diagram: {url}")
-    subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        url = f"file://{os.path.abspath(file_path)}"
+        print(f"Opening {mode} diagram: {url}")
+        subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def cmd_project_dashboard(args):
@@ -371,7 +384,7 @@ def setup_project_subparser(sub):
     # open
     p = sub_p.add_parser("open", help="Open diagram in browser")
     p.add_argument("name", help="Project name")
-    p.add_argument("-m", "--mode", choices=["business", "developer"], default="business", help="Diagram mode to open")
+    p.add_argument("-m", "--mode", choices=["business", "developer", "both"], default="both", help="Diagram mode to open (default: both)")
     p.set_defaults(func=cmd_project_open)
 
     # dashboard

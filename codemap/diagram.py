@@ -167,9 +167,16 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
         <div class="row"><div class="bar" style="background:#8957e5"></div> <strong>Validasi</strong> — Rules input field</div>
         <div class="row"><div class="bar" style="background:#d29922"></div> <strong>Database Table</strong> — Penyimpanan data</div>
         <div class="sep"></div>
+        <h5>Legend Singkatan & Istilah (Glossary)</h5>
+        <div class="row"><strong>API</strong>: Application Programming Interface</div>
+        <div class="row"><strong>DB</strong>: Database (Basis Data & Tabel)</div>
+        <div class="row"><strong>UI</strong>: User Interface (Tampilan Pengguna)</div>
+        <div class="row"><strong>AST</strong>: Abstract Syntax Tree (Ekstraksi Kode)</div>
+        <div class="row"><strong>HTTP</strong>: GET (Lihat), POST (Tambah), PUT (Edit), DELETE (Hapus)</div>
+        <div class="sep"></div>
         <h5>Panduan Navigasi</h5>
         <div class="row">▸ Klik card = buka / tutup cabang</div>
-        <div class="row">Scroll mouse = Zoom, Drag = Geser</div>
+        <div class="row">▸ Scroll mouse = Zoom, Drag = Geser</div>
       </div>
     </div>
   </div>
@@ -598,6 +605,13 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
 .node-box.dimmed { opacity: 0.15; }
 .node-circle { stroke-width: 1.5; transition: all 0.15s; }
 .node-circle.selected { stroke: #f0e040 !important; stroke-width: 3 !important; }
+
+/* Legend */
+.legend { position: absolute; bottom: 12px; left: 12px; background: #161b22ee; border: 1px solid #30363d; border-radius: 8px; padding: 10px 14px; font-size: 11px; max-width: 320px; backdrop-filter: blur(4px); pointer-events: auto; }
+.legend h5 { font-size: 10px; color: #8b949e; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+.legend .row { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 11px; }
+.legend .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legend .sep { height: 1px; background: #30363d; margin: 6px 0; }
 </style>
 </head>
 <body>
@@ -635,6 +649,24 @@ body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMac
           <h3 id="detail-title">—</h3>
         </div>
         <div id="detail-body"></div>
+      </div>
+      <div id="legend" class="legend">
+        <h5>Tipe Node Technical</h5>
+        <div class="row"><div class="dot" style="background:#58a6ff"></div> <strong>Endpoint</strong> — API Route / Controller Endpoint</div>
+        <div class="row"><div class="dot" style="background:#3fb950"></div> <strong>Logic</strong> — Business Logic / Controller Function</div>
+        <div class="row"><div class="dot" style="background:#d29922"></div> <strong>Database Table</strong> — Skema Tabel Basis Data</div>
+        <div class="row"><div class="dot" style="background:#8957e5"></div> <strong>Validation</strong> — Form Request Validation</div>
+        <div class="sep"></div>
+        <h5>Legend Singkatan & Istilah (Glossary)</h5>
+        <div class="row"><strong>API</strong>: Application Programming Interface</div>
+        <div class="row"><strong>DB</strong>: Database (Basis Data & Skema Tabel)</div>
+        <div class="row"><strong>AST</strong>: Abstract Syntax Tree (Ekstraksi Kode)</div>
+        <div class="row"><strong>HTTP</strong>: GET, POST, PUT, PATCH, DELETE</div>
+        <div class="sep"></div>
+        <h5>Panduan Navigasi</h5>
+        <div class="row">▸ Drag node = ubah posisi node</div>
+        <div class="row">▸ Klik node = lihat detail teknis & relasi</div>
+        <div class="row">▸ Scroll mouse = Zoom, Drag canvas = Geser</div>
       </div>
     </div>
   </div>
