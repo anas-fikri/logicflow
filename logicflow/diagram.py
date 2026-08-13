@@ -6,6 +6,7 @@ Modes:
 """
 
 import json
+import html as html_lib
 from pathlib import Path
 
 D3_PATH = Path(__file__).parent.parent / "vendor" / "d3.v7.min.js"
@@ -266,6 +267,7 @@ let treeRoot = null;
 let zoomBehavior = null;
 let selectedNode = null;
 let selectedNodeKey = null;  // stable key for re-highlight after renderTree
+let isFirstRender = true;
 
 function _nodeKey(d) {
   return d && d.data ? (d.depth + ':' + d.data.name + ':' + (d.data.path||'')) : null;
@@ -410,11 +412,14 @@ function renderTree() {
   // Re-highlight selected sidebar item
   _applySidebarHighlight();
 
-  // Center initial view
-  const initScale = 0.85;
-  const initX = width / 3;
-  const initY = height / 2 - (treeRoot.x || 0) * initScale;
-  svg.call(zoomBehavior.transform, d3.zoomIdentity.translate(initX, initY).scale(initScale));
+  // Center initial view (only on first render to preserve zoom/pan on expand/collapse)
+  if (isFirstRender) {
+    isFirstRender = false;
+    const initScale = 0.85;
+    const initX = width / 3;
+    const initY = height / 2 - (treeRoot.x || 0) * initScale;
+    svg.call(zoomBehavior.transform, d3.zoomIdentity.translate(initX, initY).scale(initScale));
+  }
 
   // Stats
   const totalMenus = treeRoot.children ? treeRoot.children.length : 0;
@@ -513,7 +518,9 @@ function selectNode(d) {
     const children = (d.children || d._children || []);
     html += `<div class="section"><h4>Fitur Dalam Menu Ini (${children.length})</h4>`;
     children.forEach(c => {
-      html += `<div class="item-link" onclick="focusNode('${c.data.name}')">🔹 ${c.data.name}</div>`;
+      const k = _nodeKey(c);
+      const safeName = (c.data.name || '').replace(/'/g, "\\'");
+      html += `<div class="item-link" onclick="focusNodeByKey('${k}')">🔹 ${safeName}</div>`;
     });
     html += '</div>';
   }
@@ -651,17 +658,16 @@ function filterTree(q) {
   });
 }
 
-function focusNode(name) {
-  const match = treeRoot.descendants().find(d => d.data.name === name);
-  if (match) {
-    let parent = match.parent;
-    while (parent) {
-      if (parent._children) { parent.children = parent._children; parent._children = null; }
-      parent = parent.parent;
-    }
-    renderTree();
-    selectNode(match);
+function focusNodeByKey(key) {
+  const d = window._TREE_NODE_MAP && window._TREE_NODE_MAP[key];
+  if (!d) return;
+  let parent = d.parent;
+  while (parent) {
+    if (parent._children) { parent.children = parent._children; parent._children = null; }
+    parent = parent.parent;
   }
+  renderTree();
+  selectNode(d);
 }
 
 function exportSVG() {
@@ -1197,17 +1203,19 @@ class DiagramBuilder:
         scan_json = json.dumps(scan_result, ensure_ascii=False)
         dash = dashboard_path or "../dashboard.html"
 
+        safe_title = html_lib.escape(title)
+
         if mode == "developer":
             html = DEV_TEMPLATE.replace("__D3_JS__", d3_js)
             html = html.replace("__SCAN_DATA__", scan_json)
-            html = html.replace("__TITLE__", title)
+            html = html.replace("__TITLE__", safe_title)
             html = html.replace("__BIZ_FILE__", biz_file or "business.html")
             html = html.replace("__DASHBOARD_PATH__", dash)
             return html
         else:
             html = BUSINESS_TEMPLATE.replace("__D3_JS__", d3_js)
             html = html.replace("__SCAN_DATA__", scan_json)
-            html = html.replace("__TITLE__", title)
+            html = html.replace("__TITLE__", safe_title)
             html = html.replace("__DEV_FILE__", dev_file or "developer.html")
             html = html.replace("__DASHBOARD_PATH__", dash)
             return html
