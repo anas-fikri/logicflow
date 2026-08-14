@@ -21,6 +21,7 @@ from logicflow.ai import AIDocumenter
 from logicflow.diagram import DiagramBuilder
 from logicflow.project import setup_project_subparser
 from logicflow.scanner import CodeScanner
+from logicflow.wizard import run_wizard
 
 VERSION = "1.1.0"
 
@@ -188,13 +189,29 @@ def cmd_full(args):
         print(f"AI Docs:   {ai_path} ({len(docs)} bytes)")
 
 
+def cmd_wizard(args):
+    """Launch interactive wizard menu."""
+    run_wizard()
+
+
 def main():
+    if len(sys.argv) == 1:
+        run_wizard()
+        return
+
     p = argparse.ArgumentParser(
         prog="logicflow",
         description="LogicFlow — Source Code Visualizer & Dual-Mode Diagram Generator",
     )
     p.add_argument("--version", action="version", version=f"LogicFlow v{VERSION}")
     sub = p.add_subparsers(dest="command", required=True)
+
+    # wizard / ui
+    sp = sub.add_parser("wizard", help="Interactive TTY menu wizard")
+    sp.set_defaults(func=cmd_wizard)
+
+    sp_ui = sub.add_parser("ui", help="Interactive TTY menu wizard (alias)")
+    sp_ui.set_defaults(func=cmd_wizard)
 
     # scan
     sp = sub.add_parser("scan", help="Non-AI: AST scan → JSON/Markdown")
