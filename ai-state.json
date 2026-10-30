@@ -37,6 +37,96 @@
       "description": "40 static analysis / typing issues resolved (W605, BLE001, DTZ005, mypy Callable attributes)",
       "status": "fixed",
       "fix_commit": "3281515"
+    },
+    {
+      "source": "lint",
+      "file": "--> logicflow/wizard.py",
+      "line": 21,
+      "severity": "warning",
+      "issue": "20",
+      "status": "open",
+      "discovered_at": "2026-08-14T09:37:54Z"
+    },
+    {
+      "source": "lint",
+      "file": "--> logicflow/wizard.py",
+      "line": 176,
+      "severity": "warning",
+      "issue": "21",
+      "status": "open",
+      "discovered_at": "2026-08-14T09:37:54Z"
+    },
+    {
+      "source": "lint",
+      "file": "--> logicflow/wizard.py",
+      "line": 216,
+      "severity": "warning",
+      "issue": "21",
+      "status": "open",
+      "discovered_at": "2026-08-14T09:37:54Z"
+    },
+    {
+      "source": "lint",
+      "file": "--> logicflow/wizard.py",
+      "line": 271,
+      "severity": "warning",
+      "issue": "20",
+      "status": "open",
+      "discovered_at": "2026-08-14T09:37:54Z"
+    },
+    {
+      "source": "lint",
+      "file": "--> logicflow/wizard.py",
+      "line": 302,
+      "severity": "warning",
+      "issue": "20",
+      "status": "open",
+      "discovered_at": "2026-08-14T09:37:54Z"
+    },
+    {
+      "source": "typecheck",
+      "file": "logicflow/wizard.py",
+      "line": 27,
+      "severity": "error",
+      "issue": "No overload variant of \"dataclass\" matches argument type \"bool\"  [call-overload]",
+      "status": "open",
+      "discovered_at": "2026-08-14T09:37:54Z"
+    },
+    {
+      "source": "typecheck",
+      "file": "logicflow/wizard.py",
+      "line": 176,
+      "severity": "error",
+      "issue": "Name \"Args\" is not defined  [name-defined]",
+      "status": "open",
+      "discovered_at": "2026-08-14T09:37:54Z"
+    },
+    {
+      "source": "typecheck",
+      "file": "logicflow/wizard.py",
+      "line": 216,
+      "severity": "error",
+      "issue": "Name \"Args\" is not defined  [name-defined]",
+      "status": "open",
+      "discovered_at": "2026-08-14T09:37:54Z"
+    },
+    {
+      "source": "typecheck",
+      "file": "logicflow/wizard.py",
+      "line": 271,
+      "severity": "error",
+      "issue": "Name \"Args\" is not defined  [name-defined]",
+      "status": "open",
+      "discovered_at": "2026-08-14T09:37:54Z"
+    },
+    {
+      "source": "typecheck",
+      "file": "logicflow/wizard.py",
+      "line": 302,
+      "severity": "error",
+      "issue": "Name \"Args\" is not defined  [name-defined]",
+      "status": "open",
+      "discovered_at": "2026-08-14T09:37:54Z"
     }
   ],
   "progress": [

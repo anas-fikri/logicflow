@@ -18,13 +18,12 @@ import getpass
 import os
 import sys
 from dataclasses import dataclass
-from typing import Any
 
 from logicflow import project as _proj
 from logicflow import remote as _remote
 
 
-@dataclass(slots=True)
+@dataclass
 class _Args:
     """Mutable placeholder untuk argparse.Namespace (interaktif mode)."""
 
@@ -173,7 +172,7 @@ def wizard_add_local() -> None:
     _proj.cmd_project_add(args)
 
     if prompt_confirm("\nJalankan scanning & buat diagram sekarang?"):
-        args_scan = Args()
+        args_scan = _Args()
         args_scan.name = name
         args_scan.pull = False
         _proj.cmd_project_scan(args_scan)
@@ -213,7 +212,7 @@ def wizard_add_remote() -> None:
     _proj.cmd_project_add_remote(args)
 
     if prompt_confirm("\nJalankan scanning & buat diagram sekarang?"):
-        args_scan = Args()
+        args_scan = _Args()
         args_scan.name = name
         args_scan.pull = False
         _proj.cmd_project_scan(args_scan)
@@ -268,7 +267,7 @@ def wizard_list_projects() -> None:
     if reg["projects"] and prompt_confirm("\nLihat detail spesifik dari satu project?"):
         name = prompt_select_project(reg["projects"], "Pilih Project")
         if name:
-            args = Args()
+            args = _Args()
             args.name = name
             print()
             _proj.cmd_project_info(args)
@@ -299,7 +298,7 @@ def wizard_open_project() -> None:
             m_choice = input("Pilih (1-3) [default: 1]: ").strip()
 
             mode_map = {"1": "both", "2": "business", "3": "developer", "": "both"}
-            args = Args()
+            args = _Args()
             args.name = name
             args.mode = mode_map.get(m_choice, "both")
             _proj.cmd_project_open(args)
